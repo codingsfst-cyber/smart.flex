@@ -1,0 +1,2673 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, viewport-fit=cover">
+<title>SmartFlex - ผู้ช่วยดูแลท่านั่ง</title>
+<meta name="description" content="SmartFlex ตรวจและส่งเสริมท่านั่งที่เหมาะสมด้วยกล้องและ AI ประมวลผลภายในอุปกรณ์ ไม่บันทึกภาพหรือวิดีโอ">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%2316A34A'/%3E%3Ctext x='32' y='42' font-family='Arial, sans-serif' font-size='26' font-weight='800' fill='white' text-anchor='middle'%3EST%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700&family=Noto+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ======================================================================
+   SmartFlex - Design tokens
+   โทนฟ้า-ขาว สะอาด เป็นมิตร อ่านง่าย
+   ====================================================================== */
+:root{
+  --blue-900:#0F3D25;
+  --blue-700:#15803D;
+  --blue-600:#16A34A;
+  --blue-500:#22C55E;
+  --blue-100:#DCFCE7;
+  --blue-50:#F2FBF5;
+  --ink:#122318;
+  --ink-soft:#4C5C52;
+  --white:#FFFFFF;
+  --line:#D6ECDD;
+  --good:#1FA971;
+  --good-bg:#E7F8F0;
+  --warn:#E8A317;
+  --warn-bg:#FFF6E2;
+  --bad:#E5484D;
+  --bad-bg:#FDEAEA;
+  --unknown:#8A9A8F;
+  --unknown-bg:#EEF3EF;
+  --radius-lg:20px;
+  --radius-md:14px;
+  --radius-sm:10px;
+  --shadow-card:0 4px 16px rgba(15,61,37,0.06);
+  --shadow-pop:0 12px 32px rgba(15,61,37,0.16);
+  --header-h:60px;
+  --bottomnav-h:68px;
+  --font-th:'Noto Sans Thai','Noto Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;overflow-x:hidden;max-width:100%;}
+body{
+  font-family:var(--font-th);
+  background:linear-gradient(180deg,var(--blue-50) 0%,#FFFFFF 280px);
+  color:var(--ink);
+  line-height:1.6;
+  font-size:16px;
+  -webkit-font-smoothing:antialiased;
+  min-height:100vh;
+}
+h1,h2,h3,h4{font-weight:700;color:var(--blue-900);margin:0 0 8px;}
+h1{font-size:23px;} h2{font-size:19px;} h3{font-size:16px;} h4{font-size:14px;}
+p{margin:0 0 10px;}
+button{font-family:inherit;}
+a{color:var(--blue-600);}
+.visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;}
+
+/* ---------- Layout shell ---------- */
+#adminWarning{
+  display:none;background:#FFF3CD;color:#7A5B00;padding:10px 16px;text-align:center;
+  font-size:13px;border-bottom:1px solid #F2D477;
+}
+#adminWarning.show{display:block;}
+
+.app-header{
+  position:sticky;top:0;z-index:40;
+  background:rgba(255,255,255,0.92);backdrop-filter:blur(6px);
+  border-bottom:1px solid var(--line);
+  height:var(--header-h);
+  display:flex;align-items:center;justify-content:center;
+}
+.app-header-inner{
+  width:100%;max-width:1080px;margin:0 auto;padding:0 20px;
+  display:flex;align-items:center;justify-content:space-between;gap:16px;
+}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;color:var(--blue-900);font-size:18px;}
+.brand-mark{
+  width:34px;height:34px;border-radius:10px;flex:0 0 auto;
+  background:linear-gradient(135deg,var(--blue-600),var(--blue-900));
+  display:flex;align-items:center;justify-content:center;
+  color:#fff;font-size:13px;font-weight:800;letter-spacing:.02em;
+}
+
+.top-nav{display:none;gap:4px;}
+.top-nav button{
+  border:none;background:none;color:var(--ink-soft);font-size:14px;font-weight:600;
+  padding:10px 16px;border-radius:999px;cursor:pointer;transition:.15s;
+}
+.top-nav button.active{background:var(--blue-100);color:var(--blue-700);}
+.top-nav button:hover{background:var(--blue-50);}
+
+.status-pill{
+  display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink-soft);
+  border:1px solid var(--line);padding:6px 10px;border-radius:999px;cursor:pointer;background:#fff;
+}
+.status-dot{width:8px;height:8px;border-radius:50%;background:var(--unknown);flex:0 0 auto;}
+.status-dot.checking{background:var(--unknown);animation:blink 1s infinite;}
+.status-dot.ok{background:var(--good);}
+.status-dot.error{background:var(--bad);}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:.25;}}
+
+main{max-width:1080px;margin:0 auto;padding:20px 16px calc(var(--bottomnav-h) + 24px);min-height:70vh;}
+.page{display:none;}
+.page.active{display:block;animation:fadein .2s ease;}
+@keyframes fadein{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
+
+.card{
+  background:var(--white);border:1px solid var(--line);border-radius:var(--radius-lg);
+  padding:22px;box-shadow:var(--shadow-card);margin-bottom:20px;
+}
+.card-title-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:8px;flex-wrap:wrap;}
+.eyebrow{
+  font-size:12px;font-weight:700;color:var(--blue-600);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;
+}
+.grid-2{display:grid;grid-template-columns:1fr;gap:12px;}
+@media(min-width:640px){.grid-2{grid-template-columns:1fr 1fr;}}
+.grid-3{display:grid;grid-template-columns:1fr;gap:10px;}
+@media(min-width:640px){.grid-3{grid-template-columns:repeat(3,1fr);}}
+
+.field{margin-bottom:16px;}
+.field label{display:block;font-size:13.5px;font-weight:600;color:var(--ink);margin-bottom:7px;}
+.field .hint{font-size:12px;color:var(--ink-soft);margin-top:4px;}
+input[type=text],input[type=number],input[type=date],select,textarea{
+  width:100%;padding:11px 12px;border:1.5px solid var(--line);border-radius:var(--radius-sm);
+  font-size:14px;font-family:inherit;color:var(--ink);background:#fff;
+}
+input:focus,select:focus,textarea:focus,button:focus-visible{
+  outline:3px solid var(--blue-100);outline-offset:1px;border-color:var(--blue-500);
+}
+.choice-group{display:flex;flex-wrap:wrap;gap:8px;}
+.choice-chip{
+  border:1.5px solid var(--line);background:#fff;color:var(--ink-soft);
+  padding:9px 14px;border-radius:999px;font-size:13px;font-weight:600;cursor:pointer;transition:.15s;
+}
+.choice-chip.active{background:var(--blue-600);border-color:var(--blue-600);color:#fff;}
+.choice-chip:hover{border-color:var(--blue-500);}
+
+.checkbox-row{display:flex;gap:10px;align-items:flex-start;font-size:13px;color:var(--ink-soft);}
+.checkbox-row input{margin-top:3px;width:18px;height:18px;flex:0 0 auto;}
+
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  padding:13px 20px;border-radius:var(--radius-sm);border:none;font-weight:700;font-size:14px;
+  cursor:pointer;transition:.15s;text-decoration:none;min-height:46px;
+}
+.btn-primary{background:var(--blue-600);color:#fff;box-shadow:0 4px 14px rgba(22,163,74,.3);}
+.btn-primary:hover{background:var(--blue-700);}
+.btn-secondary{background:var(--blue-50);color:var(--blue-700);border:1.5px solid var(--blue-100);}
+.btn-secondary:hover{background:var(--blue-100);}
+.btn-outline{background:#fff;color:var(--ink);border:1.5px solid var(--line);}
+.btn-danger{background:var(--bad);color:#fff;}
+.btn-ghost{background:none;color:var(--blue-700);padding:8px 10px;}
+.btn:disabled{opacity:.5;cursor:not-allowed;}
+.btn-block{width:100%;}
+.btn-row{display:flex;gap:10px;flex-wrap:wrap;}
+.btn-row.paired{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+@media(max-width:340px){.btn-row.paired{grid-template-columns:1fr;}}
+
+.sheet-status-bar{
+  display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:var(--radius-sm);
+  background:var(--blue-50);border:1px solid var(--blue-100);cursor:pointer;margin-top:14px;font-size:13px;
+}
+.sheet-status-bar .label{font-weight:700;color:var(--ink);}
+.sheet-status-bar .desc{color:var(--ink-soft);flex:1;}
+
+/* ---------- Bottom nav (mobile) ---------- */
+.bottom-nav{
+  position:fixed;left:0;right:0;bottom:0;height:var(--bottomnav-h);background:#fff;
+  border-top:1px solid var(--line);display:flex;z-index:50;
+  box-shadow:0 -4px 18px rgba(15,42,82,0.08);
+  padding-bottom:env(safe-area-inset-bottom);
+}
+.bottom-nav button{
+  flex:1;border:none;background:none;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:3px;color:var(--ink-soft);font-size:11px;font-weight:600;cursor:pointer;padding:6px 2px;
+}
+.bottom-nav button svg{width:22px;height:22px;stroke:currentColor;}
+.bottom-nav button.active{color:var(--blue-600);}
+.bottom-nav button.active svg{stroke:var(--blue-600);}
+
+@media(min-width:900px){
+  .top-nav{display:flex;}
+  .bottom-nav{display:none;}
+  main{padding-bottom:32px;}
+}
+
+/* ---------- Toast ---------- */
+#toastContainer{position:fixed;left:50%;bottom:calc(var(--bottomnav-h) + 14px);transform:translateX(-50%);z-index:200;display:flex;flex-direction:column;gap:8px;width:min(92vw,420px);}
+@media(min-width:900px){#toastContainer{bottom:20px;}}
+.toast{
+  background:var(--ink);color:#fff;padding:12px 16px;border-radius:var(--radius-sm);font-size:13px;
+  box-shadow:var(--shadow-pop);animation:toastin .2s ease;
+}
+.toast.error{background:var(--bad);}
+.toast.success{background:var(--good);}
+@keyframes toastin{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
+
+/* ---------- Modal ---------- */
+.modal-backdrop{
+  position:fixed;inset:0;background:rgba(15,33,58,.5);z-index:150;display:none;
+  align-items:flex-end;justify-content:center;padding:0;
+}
+.modal-backdrop.show{display:flex;}
+@media(min-width:640px){.modal-backdrop{align-items:center;padding:20px;}}
+.modal-box{
+  background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:640px;max-height:88vh;overflow-y:auto;
+  padding:22px;box-shadow:var(--shadow-pop);
+}
+@media(min-width:640px){.modal-box{border-radius:20px;}}
+.modal-close-row{display:flex;justify-content:flex-end;}
+.modal-close-row button{border:none;background:var(--blue-50);color:var(--blue-700);width:34px;height:34px;border-radius:50%;font-size:18px;cursor:pointer;}
+
+/* ---------- Loading overlay ---------- */
+#loadingOverlay{
+  position:fixed;inset:0;background:rgba(243,248,255,.97);z-index:300;display:none;
+  flex-direction:column;align-items:center;justify-content:center;gap:16px;text-align:center;padding:24px;
+}
+#loadingOverlay.show{display:flex;}
+.spinner{width:52px;height:52px;border-radius:50%;border:5px solid var(--blue-100);border-top-color:var(--blue-600);animation:spin 0.9s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.loading-progress{width:min(280px,80vw);height:8px;background:var(--blue-100);border-radius:99px;overflow:hidden;}
+.loading-progress-bar{height:100%;background:var(--blue-600);width:10%;transition:width .3s ease;}
+
+/* ---------- Camera page ---------- */
+.camera-stage{
+  position:relative;width:100%;border-radius:var(--radius-lg);overflow:hidden;background:#0F3D25;
+  aspect-ratio:4/3;max-height:70vh;margin:0 auto;
+}
+.camera-stage.mirror .camera-frame{transform:scaleX(-1);}
+.camera-frame{position:absolute;inset:0;width:100%;height:100%;}
+.camera-frame video, .camera-frame canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;}
+.camera-labels-layer{position:absolute;inset:0;pointer-events:none;}
+.person-label{
+  position:absolute;transform:translate(-50%,-50%);
+  background:rgba(15,42,82,0.75);color:#fff;font-size:12px;font-weight:600;
+  padding:3px 9px;border-radius:999px;white-space:nowrap;
+}
+.camera-hint-overlay{
+  position:absolute;left:12px;right:12px;bottom:12px;background:rgba(15,33,58,.72);color:#fff;
+  padding:10px 12px;border-radius:12px;font-size:13px;text-align:center;
+}
+.camera-badges{position:absolute;top:10px;left:10px;right:10px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;}
+.badge{background:rgba(15,33,58,.65);color:#fff;font-size:11px;padding:5px 10px;border-radius:999px;font-weight:600;}
+.badge.status-good{background:rgba(31,169,113,.85);}
+.badge.status-warn{background:rgba(232,163,23,.9);}
+.badge.status-bad{background:rgba(229,72,77,.9);}
+.badge.status-unknown{background:rgba(138,148,166,.85);}
+
+.metric-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:14px;}
+@media(min-width:640px){.metric-grid{grid-template-columns:repeat(4,1fr);}}
+.metric-box{background:var(--blue-50);border-radius:var(--radius-sm);padding:10px 12px;text-align:center;}
+.metric-box .val{font-size:20px;font-weight:700;color:var(--blue-900);}
+.metric-box .lbl{font-size:11px;color:var(--ink-soft);}
+
+.camera-controls{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px;}
+.camera-controls .btn{flex:1;min-width:120px;}
+
+.baseline-banner{
+  background:var(--blue-900);color:#fff;border-radius:var(--radius-md);padding:16px;text-align:center;margin-top:12px;
+}
+.baseline-count{font-size:40px;font-weight:700;}
+
+/* ---------- Score ring ---------- */
+.score-ring-wrap{display:flex;flex-direction:column;align-items:center;gap:10px;padding:8px 0 4px;}
+.score-ring{width:180px;height:180px;}
+.score-ring text{font-family:var(--font-th);}
+.score-num{font-size:44px;font-weight:700;fill:var(--blue-900);}
+.score-lbl{font-size:13px;fill:var(--ink-soft);}
+
+.summary-list{display:flex;flex-direction:column;gap:8px;}
+.summary-row{display:flex;justify-content:space-between;font-size:14px;padding:6px 0;border-bottom:1px dashed var(--line);}
+.summary-row:last-child{border-bottom:none;}
+
+.tag-good{color:var(--good);font-weight:700;}
+.tag-warn{color:var(--warn);font-weight:700;}
+.tag-bad{color:var(--bad);font-weight:700;}
+.tag-unknown{color:var(--unknown);font-weight:700;}
+
+table.data-table{width:100%;border-collapse:collapse;font-size:13px;}
+table.data-table th, table.data-table td{padding:9px 8px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap;}
+table.data-table th{color:var(--ink-soft);font-weight:700;font-size:12px;}
+.table-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:var(--radius-sm);}
+
+.kpi-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;}
+@media(min-width:640px){.kpi-grid{grid-template-columns:repeat(4,1fr);}}
+.kpi-box{background:var(--blue-50);border-radius:var(--radius-md);padding:14px;text-align:center;}
+.kpi-box .num{font-size:22px;font-weight:700;color:var(--blue-900);}
+.kpi-box .lbl{font-size:12px;color:var(--ink-soft);}
+
+.filter-row{display:grid;grid-template-columns:1fr;gap:10px;}
+@media(min-width:640px){.filter-row{grid-template-columns:repeat(2,1fr);}}
+@media(min-width:900px){.filter-row{grid-template-columns:repeat(3,1fr);}}
+
+.chart-wrap{position:relative;height:220px;margin-top:8px;}
+.empty-state{text-align:center;color:var(--ink-soft);padding:32px 16px;}
+.empty-state svg{width:48px;height:48px;stroke:var(--blue-500);margin-bottom:10px;}
+
+.pose-guide-img{width:100%;border-radius:var(--radius-md);display:block;background:var(--blue-50);}
+.guide-placeholder{
+  width:100%;aspect-ratio:4/3;border-radius:var(--radius-md);background:var(--blue-50);
+  border:2px dashed var(--blue-100);display:flex;align-items:center;justify-content:center;
+  color:var(--ink-soft);font-size:13px;text-align:center;padding:16px;
+}
+.credit-line{font-size:11px;color:var(--ink-soft);margin-top:6px;}
+
+.setting-row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--line);gap:10px;}
+.setting-row:last-child{border-bottom:none;}
+.switch{position:relative;width:46px;height:26px;flex:0 0 auto;}
+.switch input{opacity:0;width:100%;height:100%;position:absolute;margin:0;cursor:pointer;}
+.switch .track{position:absolute;inset:0;background:var(--line);border-radius:99px;transition:.2s;}
+.switch .thumb{position:absolute;width:20px;height:20px;background:#fff;border-radius:50%;top:3px;left:3px;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.3);}
+.switch input:checked + .track{background:var(--blue-600);}
+.switch input:checked + .track .thumb{transform:translateX(20px);}
+
+.disclaimer-box{
+  background:var(--blue-50);border:1px solid var(--blue-100);border-radius:var(--radius-md);
+  padding:12px 14px;font-size:12.5px;color:var(--ink-soft);
+}
+.section-divider{height:1px;background:var(--line);margin:16px 0;border:none;}
+.small-muted{font-size:12px;color:var(--ink-soft);}
+.center-text{text-align:center;}
+.mb-0{margin-bottom:0;}
+.issue-pill-row{display:flex;flex-wrap:wrap;gap:8px;}
+.issue-pill{background:var(--bad-bg);color:var(--bad);font-size:12px;font-weight:700;padding:6px 12px;border-radius:999px;}
+
+@media(prefers-reduced-motion: reduce){
+  *{animation-duration:0.01ms !important;animation-iteration-count:1 !important;transition-duration:0.01ms !important;}
+}
+</style>
+</head>
+<body>
+<div id="adminWarning" role="alert"></div>
+
+<header class="app-header">
+  <div class="app-header-inner">
+    <div class="brand"><span class="brand-mark" aria-hidden="true">ST</span> SmartFlex</div>
+    <nav class="top-nav" aria-label="เมนูหลัก">
+      <button type="button" data-nav="start" class="active">เริ่ม</button>
+      <button type="button" data-nav="guide">ท่านั่ง</button>
+      <button type="button" data-nav="history">ผล</button>
+      <button type="button" data-nav="settings">ตั้งค่า</button>
+    </nav>
+    <button type="button" class="status-pill" id="statusPillTop" aria-live="polite">
+      <span class="status-dot checking" id="statusDotTop"></span>
+      <span id="statusTextTop">กำลังตรวจการเชื่อมต่อ</span>
+    </button>
+  </div>
+</header>
+
+<main id="pages">
+
+<!-- ======================= หน้าเริ่มต้น ======================= -->
+<section class="page active" id="page-start" aria-label="หน้าเริ่มต้น">
+
+  <div class="card" id="setupCard">
+    <div class="eyebrow">ตั้งค่าก่อนเริ่ม</div>
+    <h1>เริ่มต้นตรวจท่านั่ง</h1>
+    <p class="small-muted">กรอกข้อมูลสั้น ๆ เพื่อให้ SmartFlex ปรับคำแนะนำให้เหมาะกับคุณ</p>
+
+    <div class="section-divider"></div>
+
+    <div class="grid-2">
+      <div class="field">
+        <label for="inputName">ชื่อหรือชื่อเล่น</label>
+        <input type="text" id="inputName" placeholder="เช่น น้องพลอย" maxlength="60">
+      </div>
+      <div class="field">
+        <label for="inputUserId">รหัสผู้ใช้</label>
+        <input type="text" id="inputUserId" placeholder="เช่น STD-2026-01" maxlength="40">
+        <div class="hint">ใช้รหัสเดิมทุกครั้งเพื่อรวมประวัติของคุณเข้าด้วยกัน</div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label id="modeLabel">โหมดการใช้งาน</label>
+      <div class="choice-group" role="group" aria-labelledby="modeLabel" id="modeChoice">
+        <button type="button" class="choice-chip active" data-mode="personal">โหมดส่วนบุคคล</button>
+        <button type="button" class="choice-chip" data-mode="classroom">โหมดห้องเรียน / ภาพรวมหลายคน</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label id="activityLabel">กิจกรรมที่ทำอยู่</label>
+      <div class="choice-group" role="group" aria-labelledby="activityLabel" id="activityChoice">
+        <button type="button" class="choice-chip active" data-activity="นั่งเรียน">นั่งเรียน</button>
+        <button type="button" class="choice-chip" data-activity="อ่านหนังสือ">อ่านหนังสือ</button>
+        <button type="button" class="choice-chip" data-activity="ทำงานหน้าคอมพิวเตอร์">ทำงานหน้าคอมพิวเตอร์</button>
+        <button type="button" class="choice-chip" data-activity="ประชุมออนไลน์">ประชุมออนไลน์</button>
+        <button type="button" class="choice-chip" data-activity="เล่นเกม">เล่นเกม</button>
+        <button type="button" class="choice-chip" data-activity="ใช้งานทั่วไป">ใช้งานทั่วไป</button>
+      </div>
+    </div>
+
+    <div class="grid-2" id="personalFields">
+      <div class="field">
+        <label for="inputAge">อายุ (สำหรับโหมดส่วนบุคคล)</label>
+        <input type="number" id="inputAge" min="3" max="110" placeholder="เช่น 15">
+      </div>
+      <div class="field">
+        <label for="inputRole">กลุ่มผู้ใช้</label>
+        <select id="inputRole">
+          <option value="นักเรียน">นักเรียน</option>
+          <option value="นักศึกษา">นักศึกษา</option>
+          <option value="พนักงานออฟฟิศ">พนักงานออฟฟิศ</option>
+          <option value="ผู้ปกครอง">ผู้ปกครอง</option>
+          <option value="ผู้สูงอายุ">ผู้สูงอายุ</option>
+          <option value="อื่น ๆ">อื่น ๆ</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="grid-2" id="classroomFields" style="display:none;">
+      <div class="field">
+        <label for="inputOrg">โรงเรียน/หน่วยงาน</label>
+        <input type="text" id="inputOrg" placeholder="เช่น โรงเรียนบ้านสุขใจ" maxlength="120">
+      </div>
+      <div class="field">
+        <label for="inputClass">ชั้น/ห้อง</label>
+        <input type="text" id="inputClass" placeholder="เช่น ม.2/1" maxlength="60">
+      </div>
+      <div class="field">
+        <label for="inputHeadcount">จำนวนคนโดยประมาณ</label>
+        <input type="number" id="inputHeadcount" min="1" max="60" placeholder="เช่น 30">
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="field">
+        <label id="deviceLabel">ประเภทอุปกรณ์</label>
+        <select id="inputDevice" aria-labelledby="deviceLabel">
+          <option value="computer">คอมพิวเตอร์ตั้งโต๊ะ</option>
+          <option value="notebook">โน้ตบุ๊ก</option>
+          <option value="tablet">แท็บเล็ต / iPad</option>
+          <option value="phone">โทรศัพท์มือถือ</option>
+        </select>
+      </div>
+      <div class="field">
+        <label id="cameraTypeLabel">กล้องที่ใช้</label>
+        <div class="choice-group" role="group" aria-labelledby="cameraTypeLabel" id="cameraTypeChoice">
+          <button type="button" class="choice-chip active" data-camtype="front">กล้องหน้า</button>
+          <button type="button" class="choice-chip" data-camtype="back">กล้องหลัง</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="field">
+        <label id="resLabel">ความละเอียดกล้อง</label>
+        <div class="choice-group" role="group" aria-labelledby="resLabel" id="resolutionChoice">
+          <button type="button" class="choice-chip" data-res="480">480p</button>
+          <button type="button" class="choice-chip active" data-res="720">720p</button>
+          <button type="button" class="choice-chip" data-res="1080">1080p</button>
+        </div>
+      </div>
+      <div class="field">
+        <label id="sensLabel">ความไวในการเตือน</label>
+        <div class="choice-group" role="group" aria-labelledby="sensLabel" id="sensitivityChoice">
+          <button type="button" class="choice-chip" data-sens="low">ต่ำ</button>
+          <button type="button" class="choice-chip active" data-sens="medium">กลาง</button>
+          <button type="button" class="choice-chip" data-sens="high">สูง</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="field" id="angleFieldWrap">
+      <label id="angleLabel">มุมกล้อง (โหมดส่วนบุคคล)</label>
+      <div class="grid-3" role="group" aria-labelledby="angleLabel" id="angleChoice">
+        <button type="button" class="choice-chip" data-angle="straight" style="width:100%;text-align:center;padding:14px 8px;">
+          <strong>มุมตรง</strong><br><span class="small-muted">เห็นศีรษะถึงเข่า 2 ข้าง</span>
+        </button>
+        <button type="button" class="choice-chip active" data-angle="oblique45" style="width:100%;text-align:center;padding:14px 8px;">
+          <strong>มุมเฉียง 45°</strong><br><span class="small-muted">เห็นศีรษะถึงเข่า</span>
+        </button>
+        <button type="button" class="choice-chip" data-angle="side" style="width:100%;text-align:center;padding:14px 8px;">
+          <strong>มุมด้านข้างเต็มตัว</strong><br><span class="small-muted">เห็นศีรษะถึงข้อเท้า</span>
+        </button>
+      </div>
+      <div class="hint" id="angleInstructionText">วางกล้องเฉียง 45 องศาเพื่อให้เห็นแนวลำตัวและศีรษะถึงเข่าอย่างชัดเจน</div>
+    </div>
+
+    <div class="checkbox-row" style="margin-top:6px;">
+      <input type="checkbox" id="consentCheckbox">
+      <label for="consentCheckbox">ฉันยินยอมให้ใช้กล้องเพื่อวิเคราะห์ท่านั่ง โดยระบบประมวลผลภาพสดภายในอุปกรณ์ของฉันเท่านั้น และ<strong>ไม่บันทึกภาพหรือวิดีโอ</strong>ไปยังเซิร์ฟเวอร์ใด ๆ</label>
+    </div>
+
+    <div class="btn-row paired" style="margin-top:16px;">
+      <button type="button" class="btn btn-secondary" id="btnTestDevice">🔧 ทดสอบอุปกรณ์</button>
+      <button type="button" class="btn btn-primary" id="btnOpenCamera">📷 เปิดกล้อง</button>
+    </div>
+
+    <button type="button" class="sheet-status-bar" id="statusPillStart">
+      <span class="status-dot checking" id="statusDotStart"></span>
+      <span class="label">Google Sheets:</span>
+      <span class="desc" id="statusTextStart">กำลังตรวจการเชื่อมต่อ…</span>
+    </button>
+  </div>
+</section>
+
+<!-- ======================= หน้าตรวจด้วยกล้อง ======================= -->
+<section class="page" id="page-camera" aria-label="หน้าตรวจด้วยกล้อง">
+  <div class="card">
+    <div class="card-title-row">
+      <div>
+        <div class="eyebrow" id="cameraModeLabel">โหมดส่วนบุคคล</div>
+        <h1 class="mb-0">ตรวจท่านั่งด้วยกล้อง</h1>
+      </div>
+      <button type="button" class="btn btn-ghost" id="btnBackFromCamera">← กลับหน้าเริ่ม</button>
+    </div>
+
+    <div class="camera-stage" id="cameraStage">
+      <div class="camera-frame" id="cameraFrame">
+        <video id="videoEl" playsinline muted autoplay></video>
+        <canvas id="overlayCanvas"></canvas>
+        <div id="classroomLabels" class="camera-labels-layer" aria-hidden="true"></div>
+      </div>
+      <div class="camera-badges">
+        <span class="badge" id="badgeFps">FPS: -</span>
+        <span class="badge" id="badgeConfidence">ความชัด: -</span>
+        <span class="badge" id="badgeLight">แสง: กำลังตรวจ</span>
+        <span class="badge status-unknown" id="badgeStatus">รอเริ่มตรวจ</span>
+      </div>
+      <div class="camera-hint-overlay" id="cameraHint" aria-live="polite">กด "เปิดกล้อง" เพื่อเริ่มต้น</div>
+    </div>
+
+    <div class="baseline-banner" id="baselineBanner" style="display:none;">
+      <div class="small-muted" style="color:#DCFCE7;">กำลังเก็บท่ามาตรฐาน นั่งหลังตรงตามปกติ…</div>
+      <div class="baseline-count" id="baselineCountdown">3</div>
+    </div>
+
+    <div class="metric-grid">
+      <div class="metric-box"><div class="val" id="metricTimer">00:00</div><div class="lbl">เวลาที่ตรวจ</div></div>
+      <div class="metric-box"><div class="val" id="metricScore">-</div><div class="lbl">คะแนนเรียลไทม์</div></div>
+      <div class="metric-box"><div class="val" id="metricAlerts">0</div><div class="lbl">จำนวน Alert</div></div>
+      <div class="metric-box"><div class="val" id="metricSound">🔔 เปิด</div><div class="lbl">สถานะเสียง</div></div>
+    </div>
+
+    <div id="missingPartsNotice" class="disclaimer-box" style="display:none;margin-top:12px;"></div>
+
+    <div class="camera-controls">
+      <button type="button" class="btn btn-primary" id="btnSetBaseline">ตั้งท่ามาตรฐาน</button>
+      <button type="button" class="btn btn-secondary" id="btnStartCheck" disabled>เริ่มตรวจ</button>
+      <button type="button" class="btn btn-outline" id="btnPause" style="display:none;">พัก</button>
+      <button type="button" class="btn btn-outline" id="btnResume" style="display:none;">ทำต่อ</button>
+      <button type="button" class="btn btn-danger" id="btnEndSave" style="display:none;">จบและบันทึก</button>
+      <button type="button" class="btn btn-outline" id="btnToggleSound">🔔 ปิด/เปิดเสียง</button>
+      <button type="button" class="btn btn-outline" id="btnStopCamera">หยุดกล้อง</button>
+    </div>
+
+    <p class="small-muted" style="margin-top:14px;">ผลเป็นการประมาณจากภาพกล้อง 2 มิติภายในอุปกรณ์ ไม่มีการบันทึกภาพหรือวิดีโอ และไม่ใช่เครื่องมือวินิจฉัยทางการแพทย์</p>
+  </div>
+</section>
+
+<!-- ======================= หน้าท่านั่ง (คำแนะนำ) ======================= -->
+<section class="page" id="page-guide" aria-label="หน้าท่านั่งที่เหมาะสม">
+  <div class="card">
+    <div class="eyebrow">คู่มือท่านั่ง</div>
+    <h1>ท่านั่งที่เหมาะสม</h1>
+    <p class="small-muted">คำแนะนำทั่วไปเพื่อส่งเสริมท่านั่งที่ดีขึ้น ไม่ใช่การวินิจฉัยหรือคำแนะนำทางการแพทย์เฉพาะบุคคล</p>
+  </div>
+
+  <div class="card">
+    <div class="guide-placeholder" id="postureGuideImageSlot" data-note="ใส่ภาพประกอบท่านั่งที่เหมาะสมตรงนี้ (แนะนำอัตราส่วน 4:3, ไฟล์ที่ผู้ดูแลอัปโหลดจะถูกฝังเป็น Base64)">
+      พื้นที่สำหรับภาพประกอบท่านั่งที่เหมาะสม<br>(ผู้ดูแลระบบสามารถแทรกภาพของตนเองตรงนี้ได้)
+    </div>
+    <div class="credit-line">อ้างอิงแนวทาง: <a href="https://www.mrc.in.th/content/28650/office-syndrome" target="_blank" rel="noopener">ศูนย์วิจัยโรคจากการทำงาน (mrc.in.th)</a></div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <h3>🧑 คอและศีรษะ</h3>
+      <p class="small-muted">ตั้งศีรษะให้อยู่แนวเดียวกับลำตัว ไม่ยื่นไปข้างหน้าหรือก้มมากเกินไป สายตามองจอในระดับหรือต่ำกว่าระดับสายตาเล็กน้อย</p>
+    </div>
+    <div class="card">
+      <h3>🪑 หลังและไหล่</h3>
+      <p class="small-muted">พิงพนักเก้าอี้ให้หลังส่วนล่างมีที่รองรับ ไหล่ผ่อนคลายเสมอกันทั้งสองข้าง ไม่ยกเกร็งหรือเอียงไปด้านใดด้านหนึ่ง</p>
+    </div>
+    <div class="card">
+      <h3>💪 ศอก</h3>
+      <p class="small-muted">วางแขนและศอกให้ทำมุมประมาณ 90-110 องศา แขนท่อนบนแนบลำตัวไม่กางออกมากเกินไป</p>
+    </div>
+    <div class="card">
+      <h3>🦵 เข่าและเท้า</h3>
+      <p class="small-muted">เข่าทำมุมประมาณ 90-100 องศา ฝ่าเท้าวางราบกับพื้นหรือที่พักเท้า ไม่นั่งไขว่ห้างเป็นเวลานาน</p>
+    </div>
+    <div class="card">
+      <h3>🖥️ ตำแหน่งหน้าจอ</h3>
+      <p class="small-muted">วางจอห่างจากสายตาประมาณ 12-18 นิ้วเป็นแนวทางทั่วไป ปรับตามความเหมาะสมของแต่ละคน ให้ขอบบนจออยู่ระดับสายตาหรือต่ำกว่าเล็กน้อย</p>
+    </div>
+    <div class="card">
+      <h3>🔄 การเปลี่ยนอิริยาบถ</h3>
+      <p class="small-muted">ลุกยืดเหยียดหรือเปลี่ยนท่าทุก 20-30 นาที พักสายตาจากจอเป็นระยะ เพื่อลดความล้าของกล้ามเนื้อและสายตา</p>
+    </div>
+  </div>
+
+  <div class="card disclaimer-box">
+    เนื้อหาข้างต้นเป็นคำแนะนำทั่วไปเพื่อส่งเสริมพฤติกรรมสุขภาพ ไม่ใช่การวินิจฉัย ป้องกัน หรือรักษาโรค หากมีอาการปวดเรื้อรังควรปรึกษาแพทย์หรือผู้เชี่ยวชาญ
+  </div>
+</section>
+
+<!-- ======================= หน้าผลย้อนหลัง ======================= -->
+<section class="page" id="page-history" aria-label="หน้าผลย้อนหลัง">
+  <div class="card">
+    <div class="eyebrow">ผลย้อนหลัง</div>
+    <h1>ประวัติการตรวจท่านั่ง</h1>
+    <p class="small-muted">ไม่กรอกรหัสผู้ใช้ = แสดงข้อมูลรวมทุกคน กรอกรหัส = กรองเฉพาะรหัสนั้น</p>
+
+    <div class="filter-row" style="margin-top:10px;">
+      <div class="field mb-0">
+        <label for="filterUserId">รหัสผู้ใช้ / รหัสการทดลอง</label>
+        <input type="text" id="filterUserId" placeholder="เว้นว่างเพื่อดูทั้งหมด">
+      </div>
+      <div class="field mb-0">
+        <label for="filterMode">โหมด</label>
+        <select id="filterMode">
+          <option value="all">ทั้งหมด</option>
+          <option value="personal">ส่วนบุคคล</option>
+          <option value="classroom">ห้องเรียน</option>
+        </select>
+      </div>
+      <div class="field mb-0">
+        <label for="filterOrg">โรงเรียน/หน่วยงาน</label>
+        <input type="text" id="filterOrg" placeholder="ทั้งหมด">
+      </div>
+      <div class="field mb-0">
+        <label for="filterClass">ชั้น/ห้อง</label>
+        <input type="text" id="filterClass" placeholder="ทั้งหมด">
+      </div>
+      <div class="field mb-0">
+        <label for="filterDateFrom">ตั้งแต่วันที่</label>
+        <input type="date" id="filterDateFrom">
+      </div>
+      <div class="field mb-0">
+        <label for="filterDateTo">ถึงวันที่</label>
+        <input type="date" id="filterDateTo">
+      </div>
+    </div>
+
+    <div class="btn-row" style="margin-top:6px;">
+      <button type="button" class="btn btn-primary" id="btnSearchHistory">🔍 ค้นหา</button>
+      <button type="button" class="btn btn-outline" id="btnClearFilter">ล้างตัวกรอง</button>
+      <button type="button" class="btn btn-secondary" id="btnExportCsv">⬇️ ส่งออก CSV</button>
+      <button type="button" class="btn btn-secondary" id="btnPrintReport">🖨️ พิมพ์รายงาน</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>ภาพรวม</h3>
+    <div class="kpi-grid">
+      <div class="kpi-box"><div class="num" id="kpiCount">-</div><div class="lbl">จำนวนครั้ง</div></div>
+      <div class="kpi-box"><div class="num" id="kpiAvgScore">-</div><div class="lbl">คะแนนเฉลี่ย</div></div>
+      <div class="kpi-box"><div class="num" id="kpiTotalTime">-</div><div class="lbl">เวลารวม</div></div>
+      <div class="kpi-box"><div class="num" id="kpiAlerts">-</div><div class="lbl">จำนวน Alert</div></div>
+      <div class="kpi-box"><div class="num" id="kpiGood">-</div><div class="lbl">เวลาท่าดี</div></div>
+      <div class="kpi-box"><div class="num" id="kpiBad">-</div><div class="lbl">เวลาควรปรับ</div></div>
+      <div class="kpi-box"><div class="num" id="kpiUnknown">-</div><div class="lbl">เวลาตรวจไม่ชัด</div></div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <h3>แนวโน้มคะแนน</h3>
+      <div class="chart-wrap"><canvas id="trendChart"></canvas></div>
+      <div id="trendChartFallback" class="small-muted" style="display:none;">ไม่สามารถโหลดกราฟได้ในขณะนี้ แต่ข้อมูลตารางด้านล่างยังใช้งานได้ตามปกติ</div>
+    </div>
+    <div class="card">
+      <h3>ปัญหาที่พบบ่อย</h3>
+      <div class="chart-wrap"><canvas id="issueChart"></canvas></div>
+      <div id="issueChartFallback" class="small-muted" style="display:none;">ไม่สามารถโหลดกราฟได้ในขณะนี้ แต่ข้อมูลตารางด้านล่างยังใช้งานได้ตามปกติ</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>ตารางประวัติ</h3>
+    <div id="historyEmptyState" class="empty-state" style="display:none;">ยังไม่พบข้อมูลที่ตรงกับตัวกรอง</div>
+    <div id="historyLoadingState" class="empty-state">กำลังโหลดข้อมูล…</div>
+    <div class="table-scroll">
+      <table class="data-table" id="historyTable" style="display:none;">
+        <thead>
+          <tr>
+            <th>วันที่-เวลา</th><th>Session ID</th><th>โหมด</th><th>ผู้ใช้/ห้อง</th>
+            <th>กิจกรรม</th><th>เวลา</th><th>คะแนน</th><th>ท่าดี</th><th>ควรปรับ</th>
+            <th>ไม่ชัด</th><th>Alert</th><th>ปัญหาหลัก</th><th></th>
+          </tr>
+        </thead>
+        <tbody id="historyTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= หน้าตั้งค่า ======================= -->
+<section class="page" id="page-settings" aria-label="หน้าตั้งค่า">
+  <div class="card">
+    <div class="eyebrow">ตั้งค่า</div>
+    <h1>การตั้งค่าระบบ</h1>
+  </div>
+
+  <div class="card">
+    <h3>ผู้ใช้ปัจจุบัน</h3>
+    <p class="small-muted" id="currentUserDisplay">ยังไม่ได้กรอกข้อมูลผู้ใช้ — ไปที่หน้า "เริ่ม" เพื่อกรอกข้อมูล</p>
+  </div>
+
+  <div class="card">
+    <h3>กล้องและเสียง</h3>
+    <div class="setting-row">
+      <div><div>เปิดเสียงเตือน</div><div class="small-muted">มีเสียงและ SpeechSynthesis ภาษาไทยเมื่อพบท่าที่ควรปรับ</div></div>
+      <label class="switch"><input type="checkbox" id="settingSoundToggle" checked><span class="track"><span class="thumb"></span></span></label>
+    </div>
+    <div class="setting-row">
+      <div>ทดสอบเสียง</div>
+      <button type="button" class="btn btn-secondary" id="btnTestSound">🔊 ทดสอบ</button>
+    </div>
+    <div class="setting-row">
+      <div>กล้องเริ่มต้น</div>
+      <div class="choice-group" id="settingCameraType">
+        <button type="button" class="choice-chip active" data-camtype="front">กล้องหน้า</button>
+        <button type="button" class="choice-chip" data-camtype="back">กล้องหลัง</button>
+      </div>
+    </div>
+    <div class="setting-row">
+      <div>ความละเอียดเริ่มต้น</div>
+      <div class="choice-group" id="settingResolution">
+        <button type="button" class="choice-chip" data-res="480">480p</button>
+        <button type="button" class="choice-chip active" data-res="720">720p</button>
+        <button type="button" class="choice-chip" data-res="1080">1080p</button>
+      </div>
+    </div>
+    <div class="setting-row">
+      <div>ความไวในการเตือนเริ่มต้น</div>
+      <div class="choice-group" id="settingSensitivity">
+        <button type="button" class="choice-chip" data-sens="low">ต่ำ</button>
+        <button type="button" class="choice-chip active" data-sens="medium">กลาง</button>
+        <button type="button" class="choice-chip" data-sens="high">สูง</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>การเชื่อมต่อ Google Sheets</h3>
+    <button type="button" class="sheet-status-bar" id="statusPillSettings">
+      <span class="status-dot checking" id="statusDotSettings"></span>
+      <span class="label">สถานะ:</span>
+      <span class="desc" id="statusTextSettings">กำลังตรวจการเชื่อมต่อ…</span>
+    </button>
+  </div>
+
+  <div class="card">
+    <h3>ข้อมูลที่บันทึกไม่สำเร็จ</h3>
+    <p class="small-muted" id="pendingSessionInfo">ไม่มีข้อมูลค้างส่ง</p>
+    <div class="btn-row">
+      <button type="button" class="btn btn-secondary" id="btnRetryPending">🔁 บันทึกใหม่</button>
+      <button type="button" class="btn btn-outline" id="btnDownloadPendingCsv">⬇️ ดาวน์โหลด CSV สำรอง</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>เกี่ยวกับแอป</h3>
+    <p class="small-muted">SmartFlex เวอร์ชัน <span id="aboutVersion">-</span></p>
+    <p class="small-muted">SmartFlex เป็นเครื่องมือส่งเสริมพฤติกรรมและการเรียนรู้เรื่องท่านั่ง <strong>ไม่ใช่อุปกรณ์ทางการแพทย์</strong> และไม่วินิจฉัย ป้องกัน หรือรักษาโรคใด ๆ ระบบประมวลผลภาพภายในอุปกรณ์และไม่บันทึกภาพหรือวิดีโอ โหมดห้องเรียนประเมินภาพรวมเท่านั้นและไม่ใช้ Face Recognition หรือระบุตัวบุคคล</p>
+  </div>
+</section>
+
+</main>
+
+<nav class="bottom-nav" aria-label="เมนูหลัก (มือถือ)">
+  <button type="button" data-nav="start" class="active" aria-label="เริ่ม">
+    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
+    เริ่ม
+  </button>
+  <button type="button" data-nav="guide" aria-label="ท่านั่ง">
+    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2"/><path d="M9 9h6l2 6h-4v6h-4v-6H5z"/></svg>
+    ท่านั่ง
+  </button>
+  <button type="button" data-nav="history" aria-label="ผล">
+    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19h16"/><path d="M7 19v-6"/><path d="M12 19V9"/><path d="M17 19v-3"/></svg>
+    ผล
+  </button>
+  <button type="button" data-nav="settings" aria-label="ตั้งค่า">
+    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+    ตั้งค่า
+  </button>
+</nav>
+
+<div id="toastContainer" aria-live="polite"></div>
+
+<!-- Modal ทั่วไป (รายละเอียด Session / สรุปผล / ยืนยัน) -->
+<div class="modal-backdrop" id="modalBackdrop">
+  <div class="modal-box" id="modalBox" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-close-row"><button type="button" id="modalCloseBtn" aria-label="ปิด">✕</button></div>
+    <div id="modalContent"></div>
+  </div>
+</div>
+
+<div id="loadingOverlay" aria-live="polite">
+  <div class="spinner" aria-hidden="true"></div>
+  <div>
+    <div id="loadingTitle" style="font-weight:700;color:var(--blue-900);">กำลังโหลดระบบ AI</div>
+    <div id="loadingSubtitle" class="small-muted" style="margin-top:4px;">กำลังเตรียมโมเดลตรวจท่าทาง…</div>
+  </div>
+  <div class="loading-progress"><div class="loading-progress-bar" id="loadingProgressBar"></div></div>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+/* ======================================================================
+   1. CONFIG
+   ====================================================================== */
+var APP_NAME = 'SmartFlex';
+var APP_VERSION = '1.0.0';
+var APPS_SCRIPT_URL = '[APPS_SCRIPT_EXEC_URL]'; // ผู้ดูแลระบบ: แก้เป็น URL จาก Deploy ที่ลงท้ายด้วย /exec
+var GITHUB_REPOSITORY = '[GITHUB_REPOSITORY]';
+
+var DEFAULT_SETTINGS = {
+  ALERT_COOLDOWN_SECONDS: 20, WARNING_SECONDS: 8, SERIOUS_SECONDS: 20, CRITICAL_SECONDS: 45,
+  EYE_BREAK_SECONDS: 600, POSTURE_BREAK_SECONDS: 1200, STRETCH_BREAK_SECONDS: 3600,
+  MIN_DATA_COVERAGE: 40, MAX_REPORT_ROWS: 2000
+};
+var SETTINGS = Object.assign({}, DEFAULT_SETTINGS);
+
+var CDN_SOURCES = {
+  tf: [
+    'https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.20.0/dist/tf.min.js',
+    'https://unpkg.com/@tensorflow/tfjs@4.20.0/dist/tf.min.js'
+  ],
+  poseDetection: [
+    'https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection@2.1.3/dist/pose-detection.min.js',
+    'https://unpkg.com/@tensorflow-models/pose-detection@2.1.3/dist/pose-detection.min.js'
+  ],
+  chartJs: [
+    'https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js',
+    'https://unpkg.com/chart.js@4.4.4/dist/chart.umd.min.js'
+  ]
+};
+
+var DETECT_INTERVAL_MS = 180;
+var KP_SCORE_THRESHOLD = 0.3;
+
+var LS_KEYS = {
+  profile: 'smartflex_profile_v1',
+  cameraSettings: 'smartflex_camera_settings_v1',
+  soundSettings: 'smartflex_sound_settings_v1',
+  pendingSessions: 'smartflex_pending_sessions_v1'
+};
+
+/* ======================================================================
+   2. UTILITIES ทั่วไป
+   ====================================================================== */
+function $(id){ return document.getElementById(id); }
+function qsa(sel, root){ return Array.prototype.slice.call((root||document).querySelectorAll(sel)); }
+function clamp(v,min,max){ return Math.min(max, Math.max(min, v)); }
+
+function uuid(){
+  if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c){
+    var r = Math.random()*16|0, v = c==='x'?r:(r&0x3|0x8);
+    return v.toString(16);
+  });
+}
+function pad2(n){ return String(n).padStart(2,'0'); }
+function formatSeconds(sec){
+  sec = Math.max(0, Math.round(sec||0));
+  var h = Math.floor(sec/3600), m = Math.floor((sec%3600)/60), s = sec%60;
+  return h>0 ? (h+':'+pad2(m)+':'+pad2(s)) : (pad2(m)+':'+pad2(s));
+}
+function safeJsonParse(text, fallback){
+  try { return JSON.parse(text); } catch(e){ return fallback; }
+}
+function escapeHtml(str){
+  return String(str==null?'':str).replace(/[&<>"']/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+function csvEscape(v){
+  if (v===undefined||v===null) return '';
+  var s = String(v);
+  if (/[",\n]/.test(s)) return '"'+s.replace(/"/g,'""')+'"';
+  return s;
+}
+function downloadTextFile(content, filename, mime){
+  var bom = '\uFEFF';
+  var blob = new Blob([bom+content], {type:mime||'text/plain;charset=utf-8;'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 4000);
+}
+function formatDisplayDate(iso){
+  if (!iso) return '-';
+  var d = new Date(iso);
+  if (isNaN(d.getTime())) return String(iso).slice(0,16);
+  return d.toLocaleString('th-TH', {year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+}
+
+function toast(message, type){
+  var el = document.createElement('div');
+  el.className = 'toast' + (type ? ' '+type : '');
+  el.textContent = message;
+  $('toastContainer').appendChild(el);
+  setTimeout(function(){ el.remove(); }, 4200);
+}
+
+function openModal(html){
+  $('modalContent').innerHTML = html;
+  $('modalBackdrop').classList.add('show');
+}
+function closeModal(){
+  $('modalBackdrop').classList.remove('show');
+  $('modalContent').innerHTML = '';
+}
+
+function showLoading(title, subtitle, progress){
+  $('loadingOverlay').classList.add('show');
+  $('loadingTitle').textContent = title || 'กำลังโหลด…';
+  $('loadingSubtitle').textContent = subtitle || '';
+  $('loadingProgressBar').style.width = (progress||10)+'%';
+}
+function hideLoading(){ $('loadingOverlay').classList.remove('show'); }
+
+/* ======================================================================
+   3. Local Storage
+   ====================================================================== */
+function lsGet(key, fallback){
+  try {
+    var raw = localStorage.getItem(key);
+    if (!raw) return fallback;
+    var parsed = safeJsonParse(raw, undefined);
+    return parsed===undefined ? fallback : parsed;
+  } catch(e){ return fallback; }
+}
+function lsSet(key, value){
+  try { localStorage.setItem(key, JSON.stringify(value)); return true; } catch(e){ return false; }
+}
+
+/* ======================================================================
+   4. การเชื่อมต่อ Backend (JSONP)
+   ====================================================================== */
+function validateAppsScriptUrl(url){
+  if (!url) return { valid:false, reason:'ยังไม่ได้ตั้งค่า URL Backend' };
+  if (url.indexOf('https://script.google.com/macros/s/AKfycbwPq0L8FTNUJiF62MCdXWKfWLzoBEqF1Vf563DGhXPoi_qkW-qhDwsG-zewcHuvsvHHNQ/exec') !== -1) return { valid:false, reason:'ยังไม่ได้ตั้งค่า URL Backend' };
+  var trimmed = url.trim();
+  if (/\/dev$/.test(trimmed)) return { valid:false, reason:'ห้ามใช้ URL ที่ลงท้ายด้วย /dev กรุณาใช้ URL จาก Deploy ที่ลงท้ายด้วย /exec' };
+  if (!/^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec$/.test(trimmed)){
+    return { valid:false, reason:'รูปแบบ URL ไม่ถูกต้อง ต้องเป็น URL จาก Deploy ที่ลงท้ายด้วย /exec' };
+  }
+  return { valid:true };
+}
+function isApiConfigured(){ return validateAppsScriptUrl(APPS_SCRIPT_URL).valid; }
+
+var jsonpCounter = 0;
+function jsonpCall(action, dataObj, timeoutMs){
+  return new Promise(function(resolve, reject){
+    var check = validateAppsScriptUrl(APPS_SCRIPT_URL);
+    if (!check.valid){ reject(new Error(check.reason)); return; }
+    jsonpCounter++;
+    var cbName = 'smartflex_cb_' + Date.now() + '_' + jsonpCounter;
+    var script = document.createElement('script');
+    var done = false;
+
+    var timer = setTimeout(function(){
+      if (done) return;
+      done = true; cleanup();
+      reject(new Error('หมดเวลาเชื่อมต่อ Google Sheets กรุณาตรวจสอบอินเทอร์เน็ต'));
+    }, timeoutMs || 15000);
+
+    function cleanup(){
+      clearTimeout(timer);
+      try { delete window[cbName]; } catch(e){ window[cbName] = undefined; }
+      if (script.parentNode) script.parentNode.removeChild(script);
+    }
+
+    window[cbName] = function(response){
+      if (done) return;
+      done = true; cleanup();
+      if (response && response.ok === false){
+        reject(new Error(response.error || 'เกิดข้อผิดพลาดที่เซิร์ฟเวอร์'));
+      } else {
+        resolve(response);
+      }
+    };
+
+    var params = new URLSearchParams();
+    params.set('action', action);
+    params.set('callback', cbName);
+    params.set('ts', Date.now().toString());
+    if (dataObj !== undefined) params.set('data', JSON.stringify(dataObj));
+
+    script.src = APPS_SCRIPT_URL + '?' + params.toString();
+    script.onerror = function(){
+      if (done) return;
+      done = true; cleanup();
+      reject(new Error('ไม่สามารถเชื่อมต่อ Google Sheets ได้ (โหลดสคริปต์ไม่สำเร็จ)'));
+    };
+    document.body.appendChild(script);
+  });
+}
+function serverCall(action, dataObj){ return jsonpCall(action, dataObj); }
+
+function setBackendState(state, message){
+  var dots = [$('statusDotTop'), $('statusDotStart'), $('statusDotSettings')];
+  var texts = [$('statusTextTop'), $('statusTextStart'), $('statusTextSettings')];
+  dots.forEach(function(d){ if(d) d.className = 'status-dot '+state; });
+  var label = state==='checking' ? 'กำลังตรวจการเชื่อมต่อ…' : (message || (state==='ok' ? 'เชื่อมต่อสำเร็จ' : 'เชื่อมต่อไม่สำเร็จ'));
+  texts.forEach(function(t){ if(t) t.textContent = label; });
+}
+
+var backendChecking = false;
+function checkBackendConnection(){
+  if (backendChecking) return;
+  backendChecking = true;
+  setBackendState('checking');
+  if (!isApiConfigured()){
+    setBackendState('error', 'ยังไม่ได้ตั้งค่า Backend (สำหรับผู้ดูแลระบบ)');
+    backendChecking = false;
+    return;
+  }
+  serverCall('testConnection').then(function(){
+    setBackendState('ok', 'เชื่อมต่อสำเร็จ');
+    loadServerSettings();
+  }).catch(function(err){
+    setBackendState('error', err.message || 'เชื่อมต่อไม่สำเร็จ');
+  }).then(function(){ backendChecking = false; }, function(){ backendChecking = false; });
+}
+
+function loadServerSettings(){
+  serverCall('getSettings').then(function(res){
+    if (res && res.data && res.data.settings){
+      Object.keys(res.data.settings).forEach(function(k){
+        var v = Number(res.data.settings[k]);
+        if (!isNaN(v)) SETTINGS[k] = v;
+      });
+      if (res.data.settings.APP_VERSION) $('aboutVersion').textContent = res.data.settings.APP_VERSION;
+    }
+  }).catch(function(){ /* ใช้ค่าเริ่มต้นในเครื่องต่อไปได้ */ });
+}
+
+function initAdminWarning(){
+  var check = validateAppsScriptUrl(APPS_SCRIPT_URL);
+  var el = $('adminWarning');
+  if (!check.valid){
+    el.textContent = '⚠️ สำหรับผู้ดูแลระบบ: ' + check.reason + ' — กรุณาตั้งค่าตัวแปร APPS_SCRIPT_URL ในไฟล์ index.html (ผู้ใช้ทั่วไปไม่ต้องดำเนินการใด ๆ)';
+    el.classList.add('show');
+  }
+}
+
+/* ======================================================================
+   5. Navigation
+   ====================================================================== */
+var PAGE_IDS = ['start','guide','history','camera','settings'];
+function showPage(name){
+  PAGE_IDS.forEach(function(p){
+    var el = $('page-'+p);
+    if (el) el.classList.toggle('active', p===name);
+  });
+  qsa('[data-nav]').forEach(function(btn){
+    btn.classList.toggle('active', btn.getAttribute('data-nav')===name);
+  });
+  if (name !== 'camera' && cameraState.active){
+    stopCameraFlow();
+  }
+  if (name === 'history'){
+    loadHistory();
+  }
+  window.scrollTo(0,0);
+}
+function confirmLeaveIfRunning(){
+  if (sessionState.running){
+    return window.confirm('กำลังตรวจอยู่ ถ้าออกตอนนี้ข้อมูลของครั้งนี้จะไม่ถูกบันทึก ต้องการออกหรือไม่?');
+  }
+  return true;
+}
+
+/* ======================================================================
+   6. กลุ่มตัวเลือกแบบ Chip (ใช้ร่วมกันทั้งหน้าเริ่มและหน้าตั้งค่า)
+   ====================================================================== */
+function wireChipGroup(containerId, dataAttr, onChange){
+  var container = $(containerId);
+  if (!container) return { get:function(){return null;}, set:function(){} };
+  var current = null;
+  qsa('.choice-chip', container).forEach(function(chip){
+    if (chip.classList.contains('active')) current = chip.getAttribute(dataAttr);
+    chip.addEventListener('click', function(){
+      qsa('.choice-chip', container).forEach(function(c){ c.classList.remove('active'); });
+      chip.classList.add('active');
+      current = chip.getAttribute(dataAttr);
+      if (onChange) onChange(current);
+    });
+  });
+  return {
+    get: function(){ return current; },
+    set: function(val){
+      if (val===null || val===undefined) return;
+      qsa('.choice-chip', container).forEach(function(c){
+        c.classList.toggle('active', c.getAttribute(dataAttr)===val);
+      });
+      current = val;
+    }
+  };
+}
+
+var ANGLE_INSTRUCTIONS = {
+  straight: 'วางกล้องตรงหน้า ให้เห็นศีรษะ ไหล่ ศอก สะโพก และเข่าทั้งสองข้างในเฟรมเดียวกัน',
+  oblique45: 'วางกล้องเฉียงประมาณ 45 องศาจากด้านหน้า ให้เห็นศีรษะถึงเข่าอย่างชัดเจน',
+  side: 'วางกล้องด้านข้างเต็มตัว ให้เห็นตั้งแต่ศีรษะ หู ไหล่ ศอก สะโพก เข่า จนถึงข้อเท้า'
+};
+function updateAngleInstruction(v){
+  var el = $('angleInstructionText');
+  if (el) el.textContent = ANGLE_INSTRUCTIONS[v] || ANGLE_INSTRUCTIONS.oblique45;
+}
+
+function persistCameraPrefs(){
+  lsSet(LS_KEYS.cameraSettings, {
+    cameraType: cameraTypeChip.get(), resolution: resolutionChip.get(), sensitivity: sensitivityChip.get()
+  });
+}
+
+var modeChip = wireChipGroup('modeChoice','data-mode', function(v){
+  $('personalFields').style.display = v==='personal' ? 'grid' : 'none';
+  $('classroomFields').style.display = v==='classroom' ? 'grid' : 'none';
+  $('angleFieldWrap').style.display = v==='personal' ? 'block' : 'none';
+  saveProfileFromForm();
+});
+var activityChip = wireChipGroup('activityChoice','data-activity', function(){ saveProfileFromForm(); });
+var cameraTypeChip = wireChipGroup('cameraTypeChoice','data-camtype', function(v){ settingCameraTypeChip.set(v); persistCameraPrefs(); });
+var resolutionChip = wireChipGroup('resolutionChoice','data-res', function(v){ settingResolutionChip.set(v); persistCameraPrefs(); });
+var sensitivityChip = wireChipGroup('sensitivityChoice','data-sens', function(v){ settingSensitivityChip.set(v); persistCameraPrefs(); });
+var angleChip = wireChipGroup('angleChoice','data-angle', function(v){ updateAngleInstruction(v); saveProfileFromForm(); });
+
+var settingCameraTypeChip = wireChipGroup('settingCameraType','data-camtype', function(v){ cameraTypeChip.set(v); persistCameraPrefs(); });
+var settingResolutionChip = wireChipGroup('settingResolution','data-res', function(v){ resolutionChip.set(v); persistCameraPrefs(); });
+var settingSensitivityChip = wireChipGroup('settingSensitivity','data-sens', function(v){ sensitivityChip.set(v); persistCameraPrefs(); });
+
+/* ======================================================================
+   7. โปรไฟล์ผู้ใช้ (Local Storage)
+   ====================================================================== */
+function loadProfileIntoForm(){
+  var p = lsGet(LS_KEYS.profile, null);
+  if (p){
+    if (p.name) $('inputName').value = p.name;
+    if (p.userId) $('inputUserId').value = p.userId;
+    if (p.mode) modeChip.set(p.mode);
+    if (p.activity) activityChip.set(p.activity);
+    if (p.age) $('inputAge').value = p.age;
+    if (p.role) $('inputRole').value = p.role;
+    if (p.organization) $('inputOrg').value = p.organization;
+    if (p.className) $('inputClass').value = p.className;
+    if (p.headcount) $('inputHeadcount').value = p.headcount;
+    if (p.device) $('inputDevice').value = p.device;
+    if (p.angle) angleChip.set(p.angle);
+  }
+  $('personalFields').style.display = (modeChip.get()==='personal') ? 'grid':'none';
+  $('classroomFields').style.display = (modeChip.get()==='classroom') ? 'grid':'none';
+  $('angleFieldWrap').style.display = (modeChip.get()==='personal') ? 'block':'none';
+  updateAngleInstruction(angleChip.get());
+  updateCurrentUserDisplay();
+}
+function saveProfileFromForm(){
+  var p = {
+    name: $('inputName').value.trim(), userId: $('inputUserId').value.trim(),
+    mode: modeChip.get(), activity: activityChip.get(),
+    age: $('inputAge').value, role: $('inputRole').value,
+    organization: $('inputOrg').value.trim(), className: $('inputClass').value.trim(),
+    headcount: $('inputHeadcount').value, device: $('inputDevice').value, angle: angleChip.get()
+  };
+  lsSet(LS_KEYS.profile, p);
+  updateCurrentUserDisplay();
+  return p;
+}
+function updateCurrentUserDisplay(){
+  var p = lsGet(LS_KEYS.profile, null);
+  var el = $('currentUserDisplay');
+  if (!el) return;
+  if (p && p.userId){
+    el.innerHTML = 'ชื่อ: <strong>'+escapeHtml(p.name||'-')+'</strong> · รหัส: <strong>'+escapeHtml(p.userId)+'</strong> · โหมด: '+(p.mode==='personal'?'ส่วนบุคคล':'ห้องเรียน');
+  } else {
+    el.textContent = 'ยังไม่ได้กรอกข้อมูลผู้ใช้ — ไปที่หน้า "เริ่ม" เพื่อกรอกข้อมูล';
+  }
+}
+function loadCameraSoundSettings(){
+  var cs = lsGet(LS_KEYS.cameraSettings, null);
+  if (cs){
+    if (cs.cameraType){ cameraTypeChip.set(cs.cameraType); settingCameraTypeChip.set(cs.cameraType); }
+    if (cs.resolution){ resolutionChip.set(cs.resolution); settingResolutionChip.set(cs.resolution); }
+    if (cs.sensitivity){ sensitivityChip.set(cs.sensitivity); settingSensitivityChip.set(cs.sensitivity); }
+  }
+  var ss = lsGet(LS_KEYS.soundSettings, {enabled:true});
+  soundState.enabled = ss.enabled !== false;
+  $('settingSoundToggle').checked = soundState.enabled;
+  updateSoundBadge();
+}
+
+['inputName','inputUserId','inputAge','inputOrg','inputClass','inputHeadcount'].forEach(function(id){
+  var el = $(id);
+  if (el) el.addEventListener('change', function(){ saveProfileFromForm(); });
+});
+$('inputRole').addEventListener('change', saveProfileFromForm);
+$('inputDevice').addEventListener('change', saveProfileFromForm);
+
+/* ======================================================================
+   8. เสียง (Web Audio + SpeechSynthesis)
+   ====================================================================== */
+var soundState = { enabled: true };
+var audioCtx = null;
+function getAudioCtx(){
+  if (!audioCtx){
+    var AC = window.AudioContext || window.webkitAudioContext;
+    if (AC) audioCtx = new AC();
+  }
+  return audioCtx;
+}
+function playBeep(freq, durationMs){
+  var ctx = getAudioCtx();
+  if (!ctx) return;
+  if (ctx.state === 'suspended') ctx.resume();
+  var osc = ctx.createOscillator(), gain = ctx.createGain();
+  osc.frequency.value = freq || 880;
+  osc.type = 'sine';
+  gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.25, ctx.currentTime+0.02);
+  gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + (durationMs||250)/1000);
+  osc.connect(gain); gain.connect(ctx.destination);
+  osc.start();
+  osc.stop(ctx.currentTime + (durationMs||250)/1000 + 0.02);
+}
+function speakThai(text){
+  if (!('speechSynthesis' in window)) return;
+  try {
+    window.speechSynthesis.cancel();
+    var utter = new SpeechSynthesisUtterance(text);
+    utter.lang = 'th-TH';
+    utter.rate = 1.0;
+    window.speechSynthesis.speak(utter);
+  } catch(e){ /* ถ้าใช้งานไม่ได้ ให้ระบบทำงานต่อโดยไม่มีเสียงพูด */ }
+}
+function updateSoundBadge(){
+  var el = $('metricSound');
+  if (el) el.textContent = soundState.enabled ? '🔔 เปิด' : '🔕 ปิด';
+}
+function toggleSound(){
+  soundState.enabled = !soundState.enabled;
+  lsSet(LS_KEYS.soundSettings, { enabled: soundState.enabled });
+  $('settingSoundToggle').checked = soundState.enabled;
+  updateSoundBadge();
+  if (soundState.enabled){ playBeep(880,180); toast('เปิดเสียงเตือนแล้ว'); }
+  else { toast('ปิดเสียงเตือนแล้ว'); }
+}
+$('settingSoundToggle').addEventListener('change', function(){
+  soundState.enabled = this.checked;
+  lsSet(LS_KEYS.soundSettings, {enabled:soundState.enabled});
+  updateSoundBadge();
+});
+$('btnTestSound').addEventListener('click', function(){
+  playBeep(880,220);
+  speakThai('นี่คือเสียงทดสอบของ SmartFlex');
+});
+$('btnToggleSound').addEventListener('click', toggleSound);
+
+/* ======================================================================
+   9. เรขาคณิตและการวัดมุม
+   ====================================================================== */
+function angle3pt(A,B,C){
+  if (!A||!B||!C) return NaN;
+  var v1x=A.x-B.x, v1y=A.y-B.y, v2x=C.x-B.x, v2y=C.y-B.y;
+  var mag1=Math.hypot(v1x,v1y), mag2=Math.hypot(v2x,v2y);
+  if (mag1===0 || mag2===0) return NaN;
+  var cos = (v1x*v2x+v1y*v2y)/(mag1*mag2);
+  cos = clamp(cos,-1,1);
+  var deg = Math.acos(cos)*180/Math.PI;
+  return Number.isFinite(deg) ? deg : NaN;
+}
+function distance2(A,B){
+  if(!A||!B) return NaN;
+  return Math.hypot(A.x-B.x, A.y-B.y);
+}
+function slopeAngleDeg(A,B){
+  if(!A||!B) return NaN;
+  var dx=B.x-A.x, dy=B.y-A.y;
+  if (dx===0 && dy===0) return NaN;
+  return Math.atan2(dy,dx)*180/Math.PI;
+}
+function mid(a,b){
+  if(!a||!b) return null;
+  return {x:(a.x+b.x)/2, y:(a.y+b.y)/2};
+}
+
+/* ======================================================================
+   10. Keypoints
+   ====================================================================== */
+var REQUIRED_PARTS_LABEL = {
+  nose:'ศีรษะ', left_eye:'ตาซ้าย', right_eye:'ตาขวา', left_ear:'หูซ้าย', right_ear:'หูขวา',
+  left_shoulder:'ไหล่ซ้าย', right_shoulder:'ไหล่ขวา', left_elbow:'ศอกซ้าย', right_elbow:'ศอกขวา',
+  left_wrist:'ข้อมือซ้าย', right_wrist:'ข้อมือขวา', left_hip:'สะโพกซ้าย', right_hip:'สะโพกขวา',
+  left_knee:'เข่าซ้าย', right_knee:'เข่าขวา', left_ankle:'ข้อเท้าซ้าย', right_ankle:'ข้อเท้าขวา'
+};
+function kp(pose, name){
+  if (!pose || !pose.keypoints) return null;
+  var found = null;
+  for (var i=0;i<pose.keypoints.length;i++){
+    if (pose.keypoints[i].name===name){ found = pose.keypoints[i]; break; }
+  }
+  if (!found || (found.score||0) < KP_SCORE_THRESHOLD) return null;
+  return found;
+}
+function analyzeAngleParts(angle){
+  if (angle==='straight') return ['nose','left_shoulder','right_shoulder','left_elbow','right_elbow','left_hip','right_hip','left_knee','right_knee'];
+  if (angle==='side') return ['nose','left_ear','left_shoulder','left_elbow','left_hip','left_knee','left_ankle'];
+  return ['nose','left_shoulder','right_shoulder','left_hip','right_hip','left_knee','right_knee'];
+}
+function findMissingParts(pose, cameraAngle){
+  var required = analyzeAngleParts(cameraAngle);
+  var present = (pose && pose.keypoints) ? pose.keypoints.filter(function(k){return (k.score||0)>=KP_SCORE_THRESHOLD;}).map(function(k){return k.name;}) : [];
+  return required.filter(function(p){ return present.indexOf(p)===-1; }).map(function(p){ return REQUIRED_PARTS_LABEL[p] || p; });
+}
+
+/* ======================================================================
+   11. คำนวณตัวชี้วัดท่านั่งจาก Pose ดิบ
+   ====================================================================== */
+function computeMetrics(pose, cameraAngle){
+  var nose=kp(pose,'nose'), lEye=kp(pose,'left_eye'), rEye=kp(pose,'right_eye');
+  var lEar=kp(pose,'left_ear'), rEar=kp(pose,'right_ear');
+  var lSh=kp(pose,'left_shoulder'), rSh=kp(pose,'right_shoulder');
+  var lEl=kp(pose,'left_elbow'), rEl=kp(pose,'right_elbow');
+  var lWr=kp(pose,'left_wrist'), rWr=kp(pose,'right_wrist');
+  var lHip=kp(pose,'left_hip'), rHip=kp(pose,'right_hip');
+  var lKnee=kp(pose,'left_knee'), rKnee=kp(pose,'right_knee');
+  var lAnkle=kp(pose,'left_ankle'), rAnkle=kp(pose,'right_ankle');
+
+  var shoulderMid = mid(lSh,rSh) || lSh || rSh;
+  var hipMid = mid(lHip,rHip) || lHip || rHip;
+  var metrics = {};
+
+  if (cameraAngle==='side'){
+    var ear = lEar || rEar;
+    if (ear && lSh && lHip) metrics.forwardHead = angle3pt(lHip, lSh, ear);
+  } else if (nose && shoulderMid && hipMid){
+    metrics.forwardHead = angle3pt(hipMid, shoulderMid, nose);
+  }
+
+  if (lEye && rEye) metrics.headTilt = Math.abs(slopeAngleDeg(lEye,rEye));
+  else if (lEar && rEar) metrics.headTilt = Math.abs(slopeAngleDeg(lEar,rEar));
+
+  if (lSh && rSh) metrics.shoulderTilt = Math.abs(slopeAngleDeg(lSh,rSh));
+
+  if (shoulderMid && hipMid){
+    var vertical = { x: hipMid.x, y: hipMid.y - 100 };
+    metrics.torsoLean = angle3pt(vertical, hipMid, shoulderMid);
+  }
+
+  var elbowAngles = [];
+  if (lSh && lEl && lWr) elbowAngles.push(angle3pt(lSh,lEl,lWr));
+  if (rSh && rEl && rWr) elbowAngles.push(angle3pt(rSh,rEl,rWr));
+  elbowAngles = elbowAngles.filter(Number.isFinite);
+  if (elbowAngles.length) metrics.elbowAngle = elbowAngles.reduce(function(a,b){return a+b;},0)/elbowAngles.length;
+
+  var kneeAngles = [];
+  if (lHip && lKnee && lAnkle) kneeAngles.push(angle3pt(lHip,lKnee,lAnkle));
+  if (rHip && rKnee && rAnkle) kneeAngles.push(angle3pt(rHip,rKnee,rAnkle));
+  kneeAngles = kneeAngles.filter(Number.isFinite);
+  if (kneeAngles.length) metrics.kneeAngle = kneeAngles.reduce(function(a,b){return a+b;},0)/kneeAngles.length;
+
+  if (lSh && rSh && (lEl || rEl)){
+    var shoulderWidth = distance2(lSh,rSh) || 1;
+    var spreadVals=[];
+    if (lEl) spreadVals.push(Math.abs(lEl.x - lSh.x)/shoulderWidth);
+    if (rEl) spreadVals.push(Math.abs(rEl.x - rSh.x)/shoulderWidth);
+    if (spreadVals.length) metrics.armSpreadRatio = spreadVals.reduce(function(a,b){return a+b;},0)/spreadVals.length;
+  }
+
+  if (lSh && rSh) metrics.shoulderWidthPx = distance2(lSh,rSh);
+  if (shoulderMid && hipMid) metrics.torsoHeightPx = distance2(shoulderMid,hipMid);
+
+  metrics.detectedParts = (pose && pose.keypoints) ? pose.keypoints.filter(function(k){return (k.score||0)>=KP_SCORE_THRESHOLD;}).map(function(k){return k.name;}) : [];
+  return metrics;
+}
+
+var smoothState = {};
+function resetSmoothing(){ smoothState = {}; }
+function smoothMetrics(raw){
+  var out = {};
+  Object.keys(raw).forEach(function(k){
+    var v = raw[k];
+    if (typeof v !== 'number' || !Number.isFinite(v)){ out[k]=v; return; }
+    if (smoothState[k]===undefined) smoothState[k]=v;
+    else smoothState[k] = smoothState[k]*0.75 + v*0.25;
+    out[k] = smoothState[k];
+  });
+  return out;
+}
+
+var SENSITIVITY_FACTOR = { low:1.25, medium:1.0, high:0.8 };
+var METRIC_DEFS = {
+  forwardHead: { mode:'center', center:165, tolerance:20 },
+  headTilt: { mode:'center', center:0, tolerance:10 },
+  shoulderTilt: { mode:'center', center:0, tolerance:8 },
+  torsoLean: { mode:'center', center:0, tolerance:15 },
+  elbowAngle: { mode:'center', center:95, tolerance:30 },
+  // มุมเข่าจากมุมตรง/เฉียง 45 มักถูกบดบังเชิงลึก (foreshortening) จึงให้ช่วงกว้างกว่ามุมด้านข้าง
+  kneeAngle: { mode:'center', center:150, tolerance:35 },
+  armSpreadRatio: { mode:'max', max:0.6 }
+};
+var METRIC_DEFS_SIDE_OVERRIDE = {
+  kneeAngle: { mode:'center', center:95, tolerance:25 }
+};
+function getMetricDef(name, cameraAngle){
+  if (cameraAngle==='side' && METRIC_DEFS_SIDE_OVERRIDE[name]) return METRIC_DEFS_SIDE_OVERRIDE[name];
+  return METRIC_DEFS[name];
+}
+function evalMetric(name, value, sensitivity, cameraAngle){
+  if (!Number.isFinite(value)) return 'unknown';
+  var def = getMetricDef(name, cameraAngle);
+  if (!def) return 'unknown';
+  var factor = SENSITIVITY_FACTOR[sensitivity] || 1;
+  if (def.mode==='max') return value <= def.max*factor ? 'good' : 'bad';
+  var tol = def.tolerance * factor;
+  var diff = Math.abs(value - def.center);
+  return diff <= tol ? 'good' : 'bad';
+}
+function evalDistance(metrics, baseline){
+  if (!Number.isFinite(metrics.shoulderWidthPx)) return 'unknown';
+  if (!baseline || !baseline.shoulderWidthPx) return 'unknown';
+  var ratio = metrics.shoulderWidthPx / baseline.shoulderWidthPx;
+  if (ratio > 1.32) return 'bad';
+  if (ratio < 0.68) return 'bad';
+  return 'good';
+}
+function distanceMessage(metrics, baseline){
+  if (!baseline || !baseline.shoulderWidthPx || !Number.isFinite(metrics.shoulderWidthPx)) return '';
+  var ratio = metrics.shoulderWidthPx / baseline.shoulderWidthPx;
+  if (ratio > 1.32) return 'คุณนั่งใกล้กล้อง/จอมากขึ้นกว่าปกติ ลองขยับออกห่างเล็กน้อย (แนวทางทั่วไปประมาณ 12-18 นิ้ว)';
+  if (ratio < 0.68) return 'คุณอยู่ไกลกล้อง/จอมากกว่าปกติ ลองขยับเข้าใกล้เล็กน้อย';
+  return '';
+}
+
+var ISSUE_LABELS = {
+  forwardHead:'คอยื่นหรือก้มหน้า', headTilt:'ศีรษะเอียง', torsoLean:'ลำตัวโน้มหรือหลังค่อม',
+  shoulderTilt:'ไหล่เอียง', elbowAngle:'มุมศอกไม่เหมาะสม', kneeAngle:'มุมเข่าไม่เหมาะสม',
+  armSpreadRatio:'ต้นแขนกางมากเกินไป', distance:'ระยะจากกล้อง/จอควรปรับ'
+};
+var COUNT_FIELD_MAP = {
+  forwardHead:'forwardHeadCount', torsoLean:'slouchCount', shoulderTilt:'shoulderTiltCount',
+  elbowAngle:'elbowAngleIssueCount', kneeAngle:'kneeAngleIssueCount', distance:'screenDistanceIssueCount'
+};
+var RELEVANT_METRICS_BY_ANGLE = {
+  straight: ['forwardHead','headTilt','shoulderTilt','elbowAngle','kneeAngle'],
+  oblique45: ['forwardHead','torsoLean','shoulderTilt','elbowAngle','kneeAngle'],
+  side: ['forwardHead','torsoLean','elbowAngle','kneeAngle']
+};
+var ALL_ISSUE_KEYS = ['forwardHead','headTilt','torsoLean','shoulderTilt','elbowAngle','kneeAngle','armSpreadRatio','distance'];
+
+function evaluateFromMetrics(rawMetrics, cameraAngle, sensitivity, baseline){
+  var metrics = smoothMetrics(rawMetrics);
+  var relevant = (RELEVANT_METRICS_BY_ANGLE[cameraAngle] || RELEVANT_METRICS_BY_ANGLE.oblique45).concat(['armSpreadRatio']);
+  var results = {}, availableCount = 0, badList = [];
+  relevant.forEach(function(name){
+    var st = evalMetric(name, metrics[name], sensitivity, cameraAngle);
+    results[name] = st;
+    if (st !== 'unknown') availableCount++;
+    if (st === 'bad') badList.push(name);
+  });
+  var distStatus = evalDistance(metrics, baseline);
+  results.distance = distStatus;
+  if (distStatus !== 'unknown') availableCount++;
+  if (distStatus === 'bad') badList.push('distance');
+
+  var overall;
+  if (availableCount < 2) overall = 'unknown';
+  else if (badList.length > 0) overall = 'bad';
+  else overall = 'good';
+
+  return { metrics: metrics, results: results, overall: overall, badList: badList, distanceMessage: distanceMessage(metrics, baseline) };
+}
+
+/* ======================================================================
+   12. สถานะเซสชันและกล้อง
+   ====================================================================== */
+var sessionState = {
+  mode:null, sessionId:null, cameraAngle:null, sensitivity:'medium',
+  running:false, paused:false, baselineDone:false, baseline:null,
+  totalSeconds:0, goodSeconds:0, badSeconds:0, unknownSeconds:0, alertCount:0,
+  startedAt:null, endedAt:null,
+  forwardHeadCount:0, slouchCount:0, shoulderTiltCount:0, elbowAngleIssueCount:0,
+  kneeAngleIssueCount:0, screenDistanceIssueCount:0,
+  eyeBreakCount:0, postureBreakCount:0, stretchBreakCount:0,
+  breakTriggeredCount:{}, elapsedActiveSeconds:0,
+  classroomGoodObservations:0, classroomTotalObservations:0
+};
+var cameraState = {
+  active:false, stream:null, videoTrack:null, currentFacing:'user', animFrameId:null,
+  detecting:false, lastDetectTime:0, lastPoseResult:null,
+  fpsCounter:{count:0,lastTs:0,value:0}
+};
+var lastOverallStatus = 'unknown';
+var lastEvalResult = null;
+var lastClassroomResults = [];
+var issueTrackers = {};
+var sessionIssueCounts = {};
+var sessionEventsBuffer = [];
+var baselineCapture = null;
+
+function resetIssueTrackers(){ issueTrackers = {}; sessionIssueCounts = {}; }
+
+function incrementIssueCount(issueName){
+  var field = COUNT_FIELD_MAP[issueName];
+  if (field) sessionState[field] = (sessionState[field]||0)+1;
+  sessionIssueCounts[issueName] = (sessionIssueCounts[issueName]||0)+1;
+}
+function getFullIssueCounts(){
+  var out = {};
+  ALL_ISSUE_KEYS.forEach(function(k){ out[k] = sessionIssueCounts[k]||0; });
+  return out;
+}
+
+/* ======================================================================
+   13. State machine ต่อปัญหา (candidate / active / resolved)
+   ====================================================================== */
+function processIssueState(issueName, isBadNow, nowMs){
+  var WARNING_MS = SETTINGS.WARNING_SECONDS*1000;
+  var SERIOUS_MS = SETTINGS.SERIOUS_SECONDS*1000;
+  var CRITICAL_MS = SETTINGS.CRITICAL_SECONDS*1000;
+  var COOLDOWN_MS = SETTINGS.ALERT_COOLDOWN_SECONDS*1000;
+
+  var tr = issueTrackers[issueName];
+  if (!tr){ tr = { state:'resolved', sinceTs:null, lastSeriousLevel:0, lastAlertTs:0 }; issueTrackers[issueName]=tr; }
+
+  if (isBadNow){
+    if (tr.state === 'resolved'){
+      tr.state = 'candidate';
+      tr.sinceTs = nowMs;
+      tr.lastSeriousLevel = 0;
+    }
+    var elapsed = nowMs - tr.sinceTs;
+    if (tr.state === 'candidate' && elapsed >= WARNING_MS){
+      tr.state = 'active';
+      incrementIssueCount(issueName);
+      pushIssueEvent(issueName, 'warning', elapsed/1000);
+    }
+    if (tr.state === 'active'){
+      if (elapsed >= SERIOUS_MS && tr.lastSeriousLevel < 1){
+        tr.lastSeriousLevel = 1;
+        pushIssueEvent(issueName, 'serious', elapsed/1000);
+      }
+      if (elapsed >= CRITICAL_MS){
+        if (tr.lastSeriousLevel < 2){ tr.lastSeriousLevel = 2; pushIssueEvent(issueName, 'critical', elapsed/1000); }
+        if (nowMs - tr.lastAlertTs >= COOLDOWN_MS){
+          tr.lastAlertTs = nowMs;
+          triggerAlert(issueName);
+        }
+      }
+    }
+  } else if (tr.state !== 'resolved'){
+    tr.state = 'resolved';
+    tr.sinceTs = null;
+    tr.lastSeriousLevel = 0;
+  }
+  return tr.state;
+}
+
+var ALERT_SPEECH = {
+  forwardHead:'คอของคุณยื่นไปข้างหน้า ลองถอยศีรษะกลับมานะ',
+  torsoLean:'ลำตัวของคุณโน้มไปข้างหน้า ลองพิงพนักเก้าอี้',
+  shoulderTilt:'ไหล่ของคุณเอียง ลองปรับให้สมดุลกัน',
+  elbowAngle:'มุมศอกของคุณไม่เหมาะสม ลองปรับความสูงโต๊ะหรือเก้าอี้',
+  kneeAngle:'มุมเข่าของคุณไม่เหมาะสม ลองปรับความสูงเก้าอี้',
+  distance:'ระยะห่างจากกล้องหรือจอไม่เหมาะสม ลองปรับระยะดูนะ'
+};
+function triggerAlert(issueName){
+  sessionState.alertCount = (sessionState.alertCount||0)+1;
+  updateAlertBadge();
+  if (soundState.enabled){
+    playBeep(660,260);
+    speakThai(ALERT_SPEECH[issueName] || 'ลองปรับท่านั่งของคุณเล็กน้อย');
+  }
+}
+function updateAlertBadge(){ var el=$('metricAlerts'); if (el) el.textContent = sessionState.alertCount||0; }
+
+function pushIssueEvent(issueName, severity, durationSec){
+  sessionEventsBuffer.push({
+    eventId: uuid(), sessionId: sessionState.sessionId, eventTime: new Date().toISOString(),
+    eventType: 'posture_issue', issue: ISSUE_LABELS[issueName] || issueName, severity: severity,
+    message: (ISSUE_LABELS[issueName]||issueName) + ' ต่อเนื่อง ' + Math.round(durationSec||0) + ' วินาที',
+    durationSeconds: Math.round(durationSec||0)
+  });
+  if (sessionEventsBuffer.length >= 4) flushEventsBuffer();
+}
+function pushBreakEvent(kind, message){
+  sessionEventsBuffer.push({
+    eventId: uuid(), sessionId: sessionState.sessionId, eventTime: new Date().toISOString(),
+    eventType: 'break_reminder', issue: kind, severity:'info', message: message, durationSeconds:0
+  });
+  if (sessionEventsBuffer.length >= 4) flushEventsBuffer();
+}
+function flushEventsBuffer(){
+  if (!sessionEventsBuffer.length) return;
+  if (!isApiConfigured()) return;
+  var batch = sessionEventsBuffer.splice(0, sessionEventsBuffer.length);
+  serverCall('saveEvents', {events:batch}).catch(function(){
+    sessionEventsBuffer = batch.concat(sessionEventsBuffer);
+  });
+}
+
+function checkBreakReminders(elapsedActiveSeconds){
+  checkBreakType('eye', SETTINGS.EYE_BREAK_SECONDS, 'พักสายตาสักครู่ มองไกลออกไปประมาณ 20 วินาที', 'eyeBreakCount');
+  checkBreakType('posture', SETTINGS.POSTURE_BREAK_SECONDS, 'ลองเปลี่ยนอิริยาบถหรือขยับตัวสักเล็กน้อย', 'postureBreakCount');
+  checkBreakType('stretch', SETTINGS.STRETCH_BREAK_SECONDS, 'ได้เวลาลุกยืดเหยียดกล้ามเนื้อแล้ว', 'stretchBreakCount');
+
+  function checkBreakType(key, intervalSec, message, field){
+    if (!intervalSec) return;
+    var already = sessionState.breakTriggeredCount[key] || 0;
+    var dueCount = Math.floor(elapsedActiveSeconds / intervalSec);
+    if (dueCount > already){
+      sessionState.breakTriggeredCount[key] = dueCount;
+      sessionState[field] = dueCount;
+      toast(message);
+      if (soundState.enabled) speakThai(message);
+      pushBreakEvent(key, message);
+    }
+  }
+}
+
+/* ======================================================================
+   14. โหลด AI จาก CDN (พร้อม CDN สำรอง)
+   ====================================================================== */
+function loadScriptWithFallback(urls, globalCheckName){
+  return new Promise(function(resolve,reject){
+    if (window[globalCheckName]) { resolve(); return; }
+    var idx = 0;
+    function tryNext(){
+      if (idx >= urls.length){ reject(new Error('โหลดไลบรารีไม่สำเร็จ (ลองครบทุก CDN แล้ว) กรุณาตรวจสอบอินเทอร์เน็ต')); return; }
+      var url = urls[idx]; idx++;
+      var s = document.createElement('script');
+      s.src = url; s.async = true;
+      s.onload = function(){ if (window[globalCheckName]) resolve(); else tryNext(); };
+      s.onerror = function(){ tryNext(); };
+      document.head.appendChild(s);
+    }
+    tryNext();
+  });
+}
+async function prepareTfBackend(){
+  try {
+    await tf.setBackend('webgl');
+    await tf.ready();
+  } catch(err){
+    try {
+      await tf.setBackend('cpu');
+      await tf.ready();
+      toast('อุปกรณ์นี้ไม่รองรับ WebGL ระบบสลับไปใช้โหมดประมวลผลสำรอง (อาจทำงานช้าลง)');
+    } catch(err2){
+      throw new Error('ไม่สามารถเตรียมระบบประมวลผล AI ได้บนอุปกรณ์นี้');
+    }
+  }
+}
+var libsLoadedPromise = null;
+function ensurePoseLibsLoaded(){
+  if (libsLoadedPromise) return libsLoadedPromise;
+  libsLoadedPromise = (async function(){
+    showLoading('กำลังโหลดระบบ AI', 'กำลังโหลด TensorFlow.js…', 15);
+    await loadScriptWithFallback(CDN_SOURCES.tf, 'tf');
+    showLoading('กำลังโหลดระบบ AI', 'กำลังโหลดโมเดลตรวจท่าทาง…', 55);
+    await loadScriptWithFallback(CDN_SOURCES.poseDetection, 'poseDetection');
+    showLoading('กำลังโหลดระบบ AI', 'กำลังเตรียม Backend การประมวลผล…', 75);
+    await prepareTfBackend();
+    showLoading('กำลังโหลดระบบ AI', 'AI พร้อมใช้งาน', 100);
+    setTimeout(hideLoading, 400);
+  })().catch(function(err){
+    libsLoadedPromise = null; // ล้างแคชเพื่อให้ลองใหม่ได้เมื่อกดเปิดกล้องอีกครั้ง
+    hideLoading();
+    throw err;
+  });
+  return libsLoadedPromise;
+}
+
+var poseDetectorInstance = null;
+async function ensureDetectorReady(){
+  if (poseDetectorInstance) return poseDetectorInstance;
+  var detectorConfig = { modelType: poseDetection.movenet.modelType.MULTIPOSE_LIGHTNING, enableTracking: true };
+  poseDetectorInstance = await poseDetection.createDetector(poseDetection.SupportedModels.MoveNet, detectorConfig);
+  return poseDetectorInstance;
+}
+
+/* ======================================================================
+   15. กล้อง (getUserMedia)
+   ====================================================================== */
+var videoEl, overlayCanvasEl, overlayCtx, cameraStageEl, lightSampleCanvas=null;
+
+async function startCameraStream(){
+  stopCameraTracksOnly();
+  var resolution = resolutionChip.get();
+  var resMap = {
+    '480':{width:{ideal:640},height:{ideal:480}},
+    '720':{width:{ideal:1280},height:{ideal:720}},
+    '1080':{width:{ideal:1920},height:{ideal:1080}}
+  };
+  var facing = cameraTypeChip.get()==='back' ? 'environment' : 'user';
+  var constraints = { audio:false, video: Object.assign({facingMode:facing}, resMap[resolution]||resMap['720']) };
+  var stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia(constraints);
+  } catch(err){
+    throw new Error('เปิดกล้องไม่สำเร็จ กรุณาอนุญาตการใช้กล้องในเบราว์เซอร์ (' + (err && err.name || 'unknown') + ')');
+  }
+  cameraState.stream = stream;
+  cameraState.videoTrack = stream.getVideoTracks()[0];
+  cameraState.currentFacing = facing;
+  videoEl.srcObject = stream;
+  try { await videoEl.play(); } catch(e){ /* บางเบราว์เซอร์ต้องรอ user gesture ซึ่งเรามีอยู่แล้วจากปุ่มกด */ }
+  cameraState.active = true;
+  cameraStageEl.classList.toggle('mirror', facing==='user');
+}
+function stopCameraTracksOnly(){
+  if (cameraState.stream){
+    cameraState.stream.getTracks().forEach(function(t){ t.stop(); });
+    cameraState.stream = null;
+  }
+  if (videoEl) videoEl.srcObject = null;
+  cameraState.active = false;
+}
+function stopCameraFlow(){
+  cancelAnimationFrameLoop();
+  stopCameraTracksOnly();
+  sessionState.running = false;
+  if (window.speechSynthesis) window.speechSynthesis.cancel();
+}
+
+/* ======================================================================
+   16. Baseline (ท่ามาตรฐาน)
+   ====================================================================== */
+function startBaselineCapture(){
+  if (!cameraState.active){ toast('กรุณาเปิดกล้องก่อน','error'); return; }
+  if (baselineCapture) return;
+  $('baselineBanner').style.display='block';
+  $('btnSetBaseline').disabled = true;
+  baselineCapture = { countdown:3, sampling:false, samples:[] };
+  runBaselineCountdown();
+}
+function runBaselineCountdown(){
+  if (!baselineCapture) return;
+  $('baselineCountdown').textContent = baselineCapture.countdown;
+  if (baselineCapture.countdown <= 0){ startBaselineSampling(); return; }
+  baselineCapture.countdown--;
+  setTimeout(runBaselineCountdown, 1000);
+}
+function startBaselineSampling(){
+  $('baselineCountdown').textContent = 'กำลังเก็บข้อมูล…';
+  baselineCapture.sampling = true;
+  baselineCapture.samples = [];
+  baselineCapture.startTs = Date.now();
+}
+function maybeCollectBaselineSample(rawMetrics){
+  if (!baselineCapture || !baselineCapture.sampling) return;
+  baselineCapture.samples.push(rawMetrics);
+  var elapsed = Date.now()-baselineCapture.startTs;
+  if (elapsed >= 2500 || baselineCapture.samples.length >= 15) finalizeBaseline();
+}
+function avgField(samples, field){
+  var vals = samples.map(function(s){return s[field];}).filter(Number.isFinite);
+  if (!vals.length) return null;
+  return vals.reduce(function(a,b){return a+b;},0)/vals.length;
+}
+function finalizeBaseline(){
+  var samples = baselineCapture.samples;
+  var shoulderWidthPx = avgField(samples,'shoulderWidthPx');
+  var torsoHeightPx = avgField(samples,'torsoHeightPx');
+  sessionState.baseline = { shoulderWidthPx: shoulderWidthPx, torsoHeightPx: torsoHeightPx, capturedAt: new Date().toISOString() };
+  sessionState.baselineDone = true;
+  resetSmoothing();
+  baselineCapture = null;
+  $('baselineBanner').style.display='none';
+  $('btnSetBaseline').disabled = false;
+  $('btnSetBaseline').textContent = '✔ ตั้งท่ามาตรฐานแล้ว (ทำใหม่ได้)';
+  $('btnStartCheck').disabled = false;
+  if (!shoulderWidthPx){
+    toast('เก็บข้อมูลได้ไม่ครบ ระบบจะยังประเมินระยะห่างแบบคร่าว ๆ','error');
+  } else {
+    toast('ตั้งท่ามาตรฐานสำเร็จ พร้อมเริ่มตรวจได้แล้ว','success');
+  }
+}
+
+/* ======================================================================
+   17. ลูปตรวจจับและวาด AR Overlay
+   ====================================================================== */
+var lastFrameTs = 0;
+var lastBrightnessCheck = 0;
+
+function resizeCanvasToVideo(){
+  var rect = cameraStageEl.getBoundingClientRect();
+  var w = Math.round(rect.width), h = Math.round(rect.height);
+  if (overlayCanvasEl.width !== w || overlayCanvasEl.height !== h){
+    overlayCanvasEl.width = w;
+    overlayCanvasEl.height = h;
+  }
+}
+function getVideoDisplayRect(){
+  var cw=overlayCanvasEl.width, ch=overlayCanvasEl.height;
+  var vw=videoEl.videoWidth||cw, vh=videoEl.videoHeight||ch;
+  if (!vw||!vh) return {x:0,y:0,w:cw,h:ch,scale:1};
+  var scale = Math.min(cw/vw, ch/vh);
+  var w=vw*scale, h=vh*scale;
+  return {x:(cw-w)/2, y:(ch-h)/2, w:w, h:h, scale:scale};
+}
+
+var SKELETON_EDGES = [
+  ['left_shoulder','right_shoulder'],['left_shoulder','left_elbow'],['left_elbow','left_wrist'],
+  ['right_shoulder','right_elbow'],['right_elbow','right_wrist'],
+  ['left_shoulder','left_hip'],['right_shoulder','right_hip'],['left_hip','right_hip'],
+  ['left_hip','left_knee'],['left_knee','left_ankle'],['right_hip','right_knee'],['right_knee','right_ankle'],
+  ['nose','left_eye'],['nose','right_eye'],['left_eye','left_ear'],['right_eye','right_ear']
+];
+var STATUS_COLORS = { good:'#1FA971', bad:'#E5484D', unknown:'#8A94A6' };
+
+function drawSkeleton(ctx, pose, rect, color){
+  if (!pose) return;
+  ctx.strokeStyle=color; ctx.lineWidth=3; ctx.fillStyle=color;
+  SKELETON_EDGES.forEach(function(edge){
+    var a=kp(pose,edge[0]), b=kp(pose,edge[1]);
+    if(!a||!b) return;
+    ctx.beginPath();
+    ctx.moveTo(rect.x+a.x*rect.scale, rect.y+a.y*rect.scale);
+    ctx.lineTo(rect.x+b.x*rect.scale, rect.y+b.y*rect.scale);
+    ctx.stroke();
+  });
+  (pose.keypoints||[]).forEach(function(k){
+    if ((k.score||0)<KP_SCORE_THRESHOLD) return;
+    ctx.beginPath();
+    ctx.arc(rect.x+k.x*rect.scale, rect.y+k.y*rect.scale, 4, 0, Math.PI*2);
+    ctx.fill();
+  });
+}
+function pickBestPose(poses){
+  var best=null, bestScore=-1;
+  poses.forEach(function(p){
+    var score = (p.keypoints||[]).reduce(function(s,k){return s+(k.score||0);},0);
+    if (score > bestScore){ bestScore = score; best = p; }
+  });
+  return best;
+}
+function drawOverlay(){
+  var canvas = overlayCanvasEl, ctx = overlayCtx;
+  if (!canvas || !ctx) return;
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  if (!cameraState.active || !cameraState.lastPoseResult || !cameraState.lastPoseResult.length) return;
+  var rect = getVideoDisplayRect();
+
+  if (sessionState.mode==='classroom'){
+    lastClassroomResults.forEach(function(item){
+      drawSkeleton(ctx, item.pose, rect, STATUS_COLORS[item.result.overall]||STATUS_COLORS.unknown);
+    });
+  } else {
+    var pose = pickBestPose(cameraState.lastPoseResult);
+    drawSkeleton(ctx, pose, rect, STATUS_COLORS[lastOverallStatus] || STATUS_COLORS.unknown);
+  }
+}
+
+function checkLighting(ts){
+  if (ts - lastBrightnessCheck < 1000) return;
+  lastBrightnessCheck = ts;
+  try {
+    if (!lightSampleCanvas) lightSampleCanvas = document.createElement('canvas');
+    lightSampleCanvas.width = 16; lightSampleCanvas.height = 16;
+    var ctx2 = lightSampleCanvas.getContext('2d', {willReadFrequently:true});
+    ctx2.drawImage(videoEl, 0,0,16,16);
+    var data = ctx2.getImageData(0,0,16,16).data;
+    var sum=0, cnt=0;
+    for (var i=0;i<data.length;i+=4){ sum += 0.299*data[i]+0.587*data[i+1]+0.114*data[i+2]; cnt++; }
+    var avg = sum/cnt;
+    var label = avg < 60 ? 'แสงน้อยเกินไป' : (avg > 210 ? 'แสงจ้าเกินไป' : 'แสงพอดี');
+    var el = $('badgeLight'); if (el) el.textContent = 'แสง: '+label;
+  } catch(err){ /* บางเบราว์เซอร์อ่านค่าพิกเซลไม่ได้ ข้ามไปเงียบ ๆ */ }
+}
+
+function updateFpsCounter(ts){
+  if (!cameraState.fpsCounter.lastTs) cameraState.fpsCounter.lastTs = ts;
+  var elapsed = ts - cameraState.fpsCounter.lastTs;
+  if (elapsed >= 1000){
+    cameraState.fpsCounter.value = Math.round(cameraState.fpsCounter.count / (elapsed/1000));
+    cameraState.fpsCounter.count = 0;
+    cameraState.fpsCounter.lastTs = ts;
+    var el = $('badgeFps'); if (el) el.textContent = 'FPS: '+cameraState.fpsCounter.value;
+  }
+}
+
+function updateTimers(dt){
+  sessionState.totalSeconds += dt;
+  sessionState.elapsedActiveSeconds += dt;
+  if (lastOverallStatus==='good') sessionState.goodSeconds += dt;
+  else if (lastOverallStatus==='bad') sessionState.badSeconds += dt;
+  else sessionState.unknownSeconds += dt;
+  var el = $('metricTimer'); if (el) el.textContent = formatSeconds(sessionState.totalSeconds);
+}
+function updateRealtimeScore(){
+  var score;
+  if (sessionState.mode==='classroom'){
+    score = sessionState.classroomTotalObservations>0 ? Math.round(sessionState.classroomGoodObservations/sessionState.classroomTotalObservations*100) : null;
+  } else {
+    var denom = sessionState.goodSeconds+sessionState.badSeconds;
+    score = denom>0 ? Math.round(sessionState.goodSeconds/denom*100) : null;
+  }
+  var el = $('metricScore');
+  if (el) el.textContent = (score===null || !Number.isFinite(score)) ? '-' : clamp(score,0,100)+'%';
+}
+
+function updateMissingPartsUi(missingParts){
+  var el = $('missingPartsNotice');
+  if (!el) return;
+  if (missingParts && missingParts.length){
+    el.style.display='block';
+    el.textContent = 'ตรวจไม่พบจุด: '+missingParts.join(', ')+' กรุณาขยับกล้องหรือระยะนั่งให้เห็นส่วนเหล่านี้ชัดเจนขึ้น';
+  } else {
+    el.style.display='none';
+  }
+}
+function updateCameraHintText(evalResult, overall, badList){
+  var hintEl = $('cameraHint');
+  if (!hintEl) return;
+  if (!evalResult){ hintEl.textContent = 'กำลังค้นหาท่าทาง…'; return; }
+  if (overall==='unknown'){
+    var missing = findMissingParts(cameraState.lastPoseResult ? pickBestPose(cameraState.lastPoseResult) : null, sessionState.cameraAngle);
+    hintEl.textContent = missing && missing.length ? ('ขยับกล้องให้เห็น '+missing.slice(0,3).join(', ')+' เพิ่มเติม') : 'กำลังตรวจสอบ ขยับให้เห็นตัวชัดเจนขึ้น';
+    return;
+  }
+  if (overall==='bad'){
+    if (evalResult.distanceMessage && badList.indexOf('distance')!==-1){ hintEl.textContent = evalResult.distanceMessage; return; }
+    hintEl.textContent = 'พบว่า: '+badList.map(function(b){return ISSUE_LABELS[b]||b;}).slice(0,2).join(', ')+' ลองปรับท่าดูนะ';
+    return;
+  }
+  hintEl.textContent = 'ท่านั่งของคุณดีอยู่แล้ว รักษาแบบนี้ไว้นะ 🙂';
+}
+function updateBadges(evalResult, overall, badList){
+  var badgeStatus = $('badgeStatus');
+  var map = {good:['status-good','ท่าดี'], bad:['status-bad','ควรปรับท่า'], unknown:['status-unknown','ตรวจไม่ชัด']};
+  var m = map[overall] || map.unknown;
+  badgeStatus.className = 'badge '+m[0];
+  badgeStatus.textContent = m[1];
+
+  var confidence = 0;
+  if (evalResult && evalResult.metrics && evalResult.metrics.detectedParts){
+    var required = analyzeAngleParts(sessionState.cameraAngle||'oblique45');
+    var present = evalResult.metrics.detectedParts.filter(function(p){return required.indexOf(p)!==-1;});
+    confidence = required.length>0 ? Math.round(present.length/required.length*100) : 0;
+  }
+  if (!Number.isFinite(confidence)) confidence = 0;
+  $('badgeConfidence').textContent = 'ความชัด: ' + confidence + '%';
+  updateCameraHintText(evalResult, overall, badList);
+}
+function updateClassroomBadges(results){
+  var total = results.length;
+  var goodCount = results.filter(function(r){return r.overall==='good';}).length;
+  var unkCount = results.filter(function(r){return r.overall==='unknown';}).length;
+  $('badgeStatus').className = 'badge status-unknown';
+  $('badgeStatus').textContent = 'ตรวจพบ '+total+' คน';
+  $('badgeConfidence').textContent = total>0 ? ('ท่าดี '+goodCount+'/'+total) : 'ความชัด: -';
+  $('cameraHint').textContent = total===0 ? 'ยังไม่พบคนในภาพ ให้เวลาผู้เรียนเดินเข้าตำแหน่ง' : ('ภาพรวมท่านั่งของห้องเรียน: ตรวจไม่ชัด '+unkCount+' คนจาก '+total+' คน');
+}
+
+/* ======================================================================
+   18. การประมวลผลผลตรวจจับต่อเฟรม
+   ====================================================================== */
+function handleClassroomFrame(poses){
+  var results = poses.map(function(p){
+    var raw = computeMetrics(p, 'straight');
+    return evaluateFromMetrics(raw, 'straight', sessionState.sensitivity, null);
+  });
+  var indexed = poses.map(function(p,i){ return { pose:p, result: results[i] }; });
+  indexed.sort(function(a,b){
+    var ax=(kp(a.pose,'left_hip')||kp(a.pose,'nose')||{x:0}).x;
+    var bx=(kp(b.pose,'left_hip')||kp(b.pose,'nose')||{x:0}).x;
+    return ax-bx;
+  });
+  lastClassroomResults = indexed;
+  updateClassroomLabelsUi(indexed);
+  updateClassroomBadges(results);
+
+  if (sessionState.running && !sessionState.paused){
+    sessionState.classroomTotalObservations += results.length;
+    var goodCount = results.filter(function(r){return r.overall==='good';}).length;
+    var badCount = results.filter(function(r){return r.overall==='bad';}).length;
+    sessionState.classroomGoodObservations += goodCount;
+    lastOverallStatus = (badCount>0 && badCount>=goodCount) ? 'bad' : (goodCount>0 ? 'good' : 'unknown');
+    checkBreakReminders(sessionState.elapsedActiveSeconds);
+    updateRealtimeScore();
+  } else if (results.length===0){
+    lastOverallStatus = 'unknown';
+  }
+}
+function updateClassroomLabelsUi(items){
+  var container = $('classroomLabels');
+  if (!container) return;
+  var rect = getVideoDisplayRect();
+  container.innerHTML = items.map(function(item, idx){
+    var nose = kp(item.pose,'nose');
+    if (!nose) return '';
+    var x = rect.x + nose.x*rect.scale;
+    var y = Math.max(14, rect.y + nose.y*rect.scale - 22);
+    return '<div class="person-label" style="left:'+x+'px;top:'+y+'px;">คนที่ '+(idx+1)+'</div>';
+  }).join('');
+}
+
+function handleDetectionResult(poses){
+  cameraState.fpsCounter.count++;
+  if (!poses || poses.length===0){
+    lastClassroomResults = [];
+    if (sessionState.mode==='classroom'){
+      var lbl = $('classroomLabels'); if (lbl) lbl.innerHTML='';
+      updateClassroomBadges([]);
+      if (!sessionState.running) lastOverallStatus='unknown';
+    }
+    else { updateBadges(null, 'unknown', []); lastOverallStatus = 'unknown'; }
+    return;
+  }
+  if (sessionState.mode === 'classroom'){ handleClassroomFrame(poses); return; }
+
+  var pose = pickBestPose(poses);
+  var rawMetrics = computeMetrics(pose, sessionState.cameraAngle);
+  maybeCollectBaselineSample(rawMetrics);
+  var evalResult = evaluateFromMetrics(rawMetrics, sessionState.cameraAngle, sessionState.sensitivity, sessionState.baseline);
+  lastOverallStatus = evalResult.overall;
+  lastEvalResult = evalResult;
+
+  updateMissingPartsUi(findMissingParts(pose, sessionState.cameraAngle));
+  updateBadges(evalResult, evalResult.overall, evalResult.badList);
+
+  if (sessionState.running && !sessionState.paused){
+    var nowMs = Date.now();
+    (RELEVANT_METRICS_BY_ANGLE[sessionState.cameraAngle]||RELEVANT_METRICS_BY_ANGLE.oblique45).concat(['armSpreadRatio','distance']).forEach(function(name){
+      processIssueState(name, evalResult.results[name]==='bad', nowMs);
+    });
+    checkBreakReminders(sessionState.elapsedActiveSeconds);
+    updateRealtimeScore();
+  }
+}
+
+async function runDetection(){
+  if (!poseDetectorInstance || cameraState.detecting || !cameraState.active) return;
+  cameraState.detecting = true;
+  try {
+    var poses = await poseDetectorInstance.estimatePoses(videoEl, {flipHorizontal:false});
+    cameraState.lastPoseResult = poses;
+    handleDetectionResult(poses);
+  } catch(err){
+    console.error('estimatePoses error', err);
+  } finally {
+    cameraState.detecting = false;
+  }
+}
+
+function animationLoop(ts){
+  cameraState.animFrameId = requestAnimationFrame(animationLoop);
+  if (!lastFrameTs) lastFrameTs = ts;
+  var dt = Math.min(0.25, (ts-lastFrameTs)/1000);
+  lastFrameTs = ts;
+
+  resizeCanvasToVideo();
+  if (cameraState.active) checkLighting(ts);
+
+  if (sessionState.running && !sessionState.paused){ updateTimers(dt); }
+
+  if (!cameraState.detecting && ts - cameraState.lastDetectTime >= DETECT_INTERVAL_MS){
+    cameraState.lastDetectTime = ts;
+    runDetection();
+  }
+  drawOverlay();
+  updateFpsCounter(ts);
+}
+function startAnimationLoopIfNeeded(){
+  if (cameraState.animFrameId) return;
+  lastFrameTs = 0;
+  cameraState.animFrameId = requestAnimationFrame(animationLoop);
+}
+function cancelAnimationFrameLoop(){
+  if (cameraState.animFrameId){ cancelAnimationFrame(cameraState.animFrameId); cameraState.animFrameId = null; }
+}
+
+/* ======================================================================
+   19. ควบคุมการเริ่ม/พัก/จบการตรวจ
+   ====================================================================== */
+function updateCameraUiForMode(){
+  var personal = sessionState.mode === 'personal';
+  $('btnSetBaseline').style.display = personal ? 'inline-flex' : 'none';
+  $('btnStartCheck').disabled = personal ? !sessionState.baselineDone : false;
+  $('cameraModeLabel').textContent = personal ? 'โหมดส่วนบุคคล' : 'โหมดห้องเรียน / ภาพรวมหลายคน';
+}
+function resetSessionCounters(){
+  Object.assign(sessionState, {
+    running:false, paused:false, baselineDone:false, baseline:null,
+    totalSeconds:0, goodSeconds:0, badSeconds:0, unknownSeconds:0, alertCount:0,
+    forwardHeadCount:0, slouchCount:0, shoulderTiltCount:0, elbowAngleIssueCount:0,
+    kneeAngleIssueCount:0, screenDistanceIssueCount:0, eyeBreakCount:0, postureBreakCount:0,
+    stretchBreakCount:0, breakTriggeredCount:{}, elapsedActiveSeconds:0,
+    classroomGoodObservations:0, classroomTotalObservations:0, sessionId:null, startedAt:null, endedAt:null
+  });
+  sessionEventsBuffer = [];
+  resetIssueTrackers();
+  resetSmoothing();
+  $('btnSetBaseline').textContent = 'ตั้งท่ามาตรฐาน';
+  $('btnStartCheck').style.display = 'inline-flex';
+  $('btnPause').style.display = 'none';
+  $('btnResume').style.display = 'none';
+  $('btnEndSave').style.display = 'none';
+  $('metricTimer').textContent = '00:00';
+  $('metricScore').textContent = '-';
+  $('metricAlerts').textContent = '0';
+  $('missingPartsNotice').style.display = 'none';
+  updateSoundBadge();
+  var lbl = $('classroomLabels'); if (lbl) lbl.innerHTML='';
+  if (overlayCtx && overlayCanvasEl) overlayCtx.clearRect(0,0,overlayCanvasEl.width,overlayCanvasEl.height);
+}
+
+var monitoringStartLock = false;
+function startMonitoring(){
+  if (monitoringStartLock) return;
+  if (sessionState.mode==='personal' && !sessionState.baselineDone){
+    toast('กรุณาตั้งท่ามาตรฐานก่อนเริ่มตรวจ','error');
+    return;
+  }
+  monitoringStartLock = true;
+  sessionState.running = true;
+  sessionState.paused = false;
+  sessionState.sessionId = uuid();
+  sessionState.startedAt = new Date().toISOString();
+  resetIssueTrackers();
+  sessionEventsBuffer = [];
+  $('btnStartCheck').style.display='none';
+  $('btnPause').style.display='inline-flex';
+  $('btnEndSave').style.display='inline-flex';
+  toast('เริ่มตรวจท่านั่งแล้ว','success');
+  setTimeout(function(){ monitoringStartLock=false; }, 600);
+}
+function pauseMonitoring(){
+  sessionState.paused = true;
+  $('btnPause').style.display='none';
+  $('btnResume').style.display='inline-flex';
+}
+function resumeMonitoring(){
+  sessionState.paused = false;
+  $('btnResume').style.display='none';
+  $('btnPause').style.display='inline-flex';
+}
+
+var cameraOpenLock = false;
+async function openCameraFlow(testOnly){
+  if (cameraOpenLock) return;
+  if (!$('consentCheckbox').checked){
+    toast('กรุณายืนยันความยินยอมการใช้กล้องก่อน','error');
+    return;
+  }
+  cameraOpenLock = true;
+  try {
+    saveProfileFromForm();
+    persistCameraPrefs();
+    sessionState.mode = modeChip.get();
+    sessionState.cameraAngle = sessionState.mode==='personal' ? angleChip.get() : 'straight';
+    sessionState.sensitivity = sensitivityChip.get();
+    resetSessionCounters();
+
+    showPage('camera');
+    updateCameraUiForMode();
+    $('cameraHint').textContent = 'กำลังเตรียมระบบ…';
+
+    await ensurePoseLibsLoaded();
+    await startCameraStream();
+    await ensureDetectorReady();
+    startAnimationLoopIfNeeded();
+
+    $('cameraHint').textContent = testOnly ? 'ทดสอบอุปกรณ์: กล้องและ AI พร้อมใช้งานแล้ว' : 'กล้องพร้อมแล้ว ลองขยับตัวให้เห็นในเฟรม';
+    if (testOnly) toast('ทดสอบอุปกรณ์สำเร็จ กล้องและ AI พร้อมใช้งาน','success');
+  } catch(err){
+    console.error(err);
+    hideLoading();
+    toast(err.message || 'ไม่สามารถเปิดกล้องหรือโหลดระบบ AI ได้', 'error');
+    $('cameraHint').textContent = 'เกิดข้อผิดพลาด: ' + (err.message||'');
+  } finally {
+    cameraOpenLock = false;
+  }
+}
+
+/* ======================================================================
+   20. คะแนน สรุปผล และการบันทึก
+   ====================================================================== */
+function computeFinalScore(){
+  if (sessionState.mode==='classroom'){
+    var total = sessionState.classroomTotalObservations;
+    var good = sessionState.classroomGoodObservations;
+    return total>0 ? clamp(Math.round(good/total*100),0,100) : 0;
+  }
+  var denom = sessionState.goodSeconds + sessionState.badSeconds;
+  if (denom<=0) return 0;
+  return clamp(Math.round(sessionState.goodSeconds/denom*100),0,100);
+}
+function computeCoverage(){
+  if (sessionState.totalSeconds<=0) return 0;
+  return clamp(Math.round((sessionState.goodSeconds+sessionState.badSeconds)/sessionState.totalSeconds*100),0,100);
+}
+function determineMainIssue(){
+  var top=null, topCount=0;
+  Object.keys(sessionIssueCounts).forEach(function(k){
+    if (sessionIssueCounts[k] > topCount){ topCount = sessionIssueCounts[k]; top = k; }
+  });
+  return { key: top, label: top ? ISSUE_LABELS[top] : '-', count: topCount };
+}
+var ADVICE_BY_ISSUE = {
+  forwardHead:'ลองปรับจอให้อยู่ระดับสายตาและถอยศีรษะกลับมาแนวเดียวกับลำตัวบ่อย ๆ',
+  headTilt:'ลองวางจอตรงหน้าให้พอดี ไม่ต้องเอียงศีรษะมองด้านข้าง',
+  torsoLean:'ลองพิงพนักเก้าอี้ให้หลังส่วนล่างมีที่รองรับ และหลีกเลี่ยงการโน้มตัวไปข้างหน้า',
+  shoulderTilt:'ลองวางแขนทั้งสองข้างให้สมดุลกันและปรับความสูงโต๊ะ/เก้าอี้ให้เท่ากันทั้งสองฝั่ง',
+  elbowAngle:'ลองปรับความสูงโต๊ะหรือเก้าอี้ให้ศอกทำมุมประมาณ 90-110 องศา',
+  kneeAngle:'ลองปรับความสูงเก้าอี้หรือใช้ที่พักเท้าให้เข่าทำมุมประมาณ 90-100 องศา',
+  armSpreadRatio:'ลองหุบต้นแขนให้แนบลำตัวมากขึ้นเล็กน้อย',
+  distance:'ลองปรับระยะห่างจากจอ/กล้องให้อยู่ในระยะที่แนะนำและสบายตา'
+};
+function buildAdviceText(score, coverage, mainIssue){
+  if (coverage < SETTINGS.MIN_DATA_COVERAGE){
+    return 'ข้อมูลที่ตรวจได้ชัดเจนยังมีน้อย (Coverage '+coverage+'%) ลองปรับระยะห่าง แสง และมุมกล้องแล้วตรวจใหม่อีกครั้งเพื่อผลลัพธ์ที่แม่นยำขึ้น';
+  }
+  if (sessionState.mode!=='classroom' && sessionState.goodSeconds<=0 && sessionState.badSeconds>0){
+    return 'ยังไม่พบช่วงท่าดีที่ตรวจได้ชัด ใช้ผลนี้เป็นจุดเริ่มต้นสำหรับปรับท่าและตำแหน่งกล้อง';
+  }
+  if (mainIssue.key && ADVICE_BY_ISSUE[mainIssue.key]) return ADVICE_BY_ISSUE[mainIssue.key];
+  return 'รักษาท่านั่งที่ดีแบบนี้ต่อไป และพักเปลี่ยนอิริยาบถเป็นระยะ';
+}
+function buildSummaryData(score){
+  var coverage = computeCoverage();
+  var mainIssue = determineMainIssue();
+  var advice = buildAdviceText(score, coverage, mainIssue);
+  var goodPoints = [], improvePoints = [];
+
+  if (sessionState.mode!=='classroom'){
+    if (sessionState.goodSeconds > sessionState.badSeconds) goodPoints.push('รักษาท่านั่งดีได้เป็นส่วนใหญ่ของเวลาที่ตรวจ');
+    if (!sessionIssueCounts.forwardHead) goodPoints.push('ไม่พบปัญหาคอยื่นหรือก้มหน้าต่อเนื่อง');
+    if (!sessionIssueCounts.shoulderTilt) goodPoints.push('ไหล่สมดุลดีตลอดการตรวจ');
+  } else {
+    if (score>=70) goodPoints.push('ภาพรวมห้องเรียนมีสัดส่วนท่าดีอยู่ในเกณฑ์ดี');
+  }
+  if (!goodPoints.length) goodPoints.push('เริ่มต้นตรวจท่านั่งแล้ว ถือเป็นก้าวแรกที่ดี');
+
+  if (mainIssue.key) improvePoints.push(ISSUE_LABELS[mainIssue.key]+' (พบ '+mainIssue.count+' ครั้ง)');
+  if (coverage < SETTINGS.MIN_DATA_COVERAGE) improvePoints.push('ข้อมูลตรวจไม่ชัดค่อนข้างมาก ลองปรับกล้องและแสง');
+  if (!improvePoints.length) improvePoints.push('ไม่พบปัญหาเด่นชัด รักษามาตรฐานนี้ต่อไป');
+
+  var nextGoal = mainIssue.key ? ('ลดจำนวนครั้งของ "'+ISSUE_LABELS[mainIssue.key]+'" ในการตรวจครั้งถัดไป') : 'รักษาคะแนนและ Coverage ให้ดีต่อเนื่อง';
+
+  return {
+    sessionId: sessionState.sessionId, score: score, coverage: coverage,
+    totalSeconds: sessionState.totalSeconds, goodSeconds: sessionState.goodSeconds,
+    badSeconds: sessionState.badSeconds, unknownSeconds: sessionState.unknownSeconds,
+    alertCount: sessionState.alertCount, mainIssue: mainIssue, advice: advice,
+    goodPoints: goodPoints, improvePoints: improvePoints, nextGoal: nextGoal,
+    issueCounts: getFullIssueCounts()
+  };
+}
+
+function buildScoreRingSvg(score){
+  var r = 78, c = 2*Math.PI*r;
+  var pct = clamp(score,0,100)/100;
+  var offset = c*(1-pct);
+  var color = score>=80 ? 'var(--good)' : (score>=50 ? 'var(--warn)' : 'var(--bad)');
+  return '<svg class="score-ring" viewBox="0 0 180 180">'
+    + '<circle cx="90" cy="90" r="'+r+'" fill="none" stroke="#DCFCE7" stroke-width="14"/>'
+    + '<circle cx="90" cy="90" r="'+r+'" fill="none" stroke="'+color+'" stroke-width="14" stroke-linecap="round" '
+    + 'stroke-dasharray="'+c+'" stroke-dashoffset="'+offset+'" transform="rotate(-90 90 90)"/>'
+    + '<text x="90" y="96" text-anchor="middle" class="score-num">'+score+'</text>'
+    + '<text x="90" y="118" text-anchor="middle" class="score-lbl">คะแนน</text>'
+    + '</svg>';
+}
+function summaryRow(label, value){ return '<div class="summary-row"><span>'+label+'</span><strong>'+value+'</strong></div>'; }
+function liItem(text){ return '<li>'+escapeHtml(text)+'</li>'; }
+function buildIssueTableHtml(counts){
+  var rows = Object.keys(counts).map(function(k){
+    return '<tr><td>'+ISSUE_LABELS[k]+'</td><td>'+counts[k]+' ครั้ง</td></tr>';
+  }).join('');
+  return '<div class="table-scroll"><table class="data-table"><thead><tr><th>ปัญหา</th><th>จำนวนครั้ง</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+}
+function showSummaryModal(summary){
+  var isPersonal = sessionState.mode==='personal';
+  var formulaLine = isPersonal
+    ? ('คะแนน = เวลาท่าดี ÷ (เวลาท่าดี + เวลาควรปรับ) × 100<br>ครั้งนี้: '+Math.round(summary.goodSeconds)+' ÷ ('+Math.round(summary.goodSeconds)+' + '+Math.round(summary.badSeconds)+') × 100 = '+summary.score+' คะแนน')
+    : ('คะแนน = จำนวนการสังเกตท่าดี ÷ จำนวนการสังเกตทั้งหมด × 100<br>ครั้งนี้: '+sessionState.classroomGoodObservations+' ÷ '+sessionState.classroomTotalObservations+' × 100 = '+summary.score+' คะแนน');
+
+  var html = ''
+    + '<h2 class="center-text">สรุปผลการตรวจ</h2>'
+    + '<div class="score-ring-wrap">'+buildScoreRingSvg(summary.score)+'<div class="small-muted">Coverage ข้อมูลที่ตรวจชัด: '+summary.coverage+'%</div></div>'
+    + '<div class="disclaimer-box" style="margin:10px 0;">'+formulaLine+'</div>'
+    + '<div class="summary-list">'
+    +   summaryRow('เวลารวม', formatSeconds(summary.totalSeconds))
+    +   summaryRow('เวลาท่าดี', formatSeconds(summary.goodSeconds))
+    +   summaryRow('เวลาควรปรับ', formatSeconds(summary.badSeconds))
+    +   summaryRow('เวลาตรวจไม่ชัด', formatSeconds(summary.unknownSeconds))
+    +   summaryRow('จำนวน Alert', summary.alertCount)
+    +   summaryRow('Session ID', '<span class="small-muted">'+escapeHtml(summary.sessionId)+'</span>')
+    + '</div>'
+    + '<h3 style="margin-top:16px;">ทำได้ดี</h3><ul>'+summary.goodPoints.map(liItem).join('')+'</ul>'
+    + '<h3>ควรปรับ</h3><ul>'+summary.improvePoints.map(liItem).join('')+'</ul>'
+    + '<h3>เป้าหมายครั้งถัดไป</h3><p>'+escapeHtml(summary.nextGoal)+'</p>'
+    + '<h3>ตารางปัญหาที่พบ</h3>' + buildIssueTableHtml(summary.issueCounts)
+    + '<p style="margin-top:10px;">'+escapeHtml(summary.advice)+'</p>'
+    + '<div id="saveStatusLine" class="small-muted" style="margin-top:10px;">🔄 กำลังบันทึกข้อมูล…</div>'
+    + '<div class="btn-row" style="margin-top:14px;">'
+    +   '<button type="button" class="btn btn-secondary" data-action="back-to-start">กลับหน้าเริ่ม</button>'
+    +   '<button type="button" class="btn btn-outline" data-action="go-history">ดูผลย้อนหลัง</button>'
+    + '</div>';
+  openModal(html);
+}
+function updateSaveStatusUi(success, message){
+  var el = document.getElementById('saveStatusLine');
+  if (el) el.textContent = (success?'✅ ':'⚠️ ') + message;
+}
+
+var endSaveLock = false;
+function endAndSave(){
+  if (endSaveLock) return;
+  endSaveLock = true;
+  sessionState.running = false;
+  sessionState.endedAt = new Date().toISOString();
+  cancelAnimationFrameLoop();
+  stopCameraTracksOnly();
+
+  var score = computeFinalScore();
+  var summary = buildSummaryData(score);
+  showSummaryModal(summary);
+  saveSessionToBackend(summary).then(function(){ endSaveLock=false; }, function(){ endSaveLock=false; });
+}
+
+/* ======================================================================
+   21. บันทึกลง Google Sheets + คิวสำรอง (Pending)
+   ====================================================================== */
+function flushEventsList(events){
+  if (!events || !events.length) return Promise.resolve();
+  var batches = [];
+  for (var i=0;i<events.length;i+=4) batches.push(events.slice(i,i+4));
+  return batches.reduce(function(p, batch){
+    return p.then(function(){ return serverCall('saveEvents', {events:batch}); });
+  }, Promise.resolve());
+}
+function queuePendingSession(sessionPayload, events){
+  var list = lsGet(LS_KEYS.pendingSessions, []);
+  list.push({ session: sessionPayload, events: events, queuedAt: new Date().toISOString() });
+  lsSet(LS_KEYS.pendingSessions, list);
+  updatePendingSessionInfoUi();
+}
+function updatePendingSessionInfoUi(){
+  var list = lsGet(LS_KEYS.pendingSessions, []);
+  var el = $('pendingSessionInfo');
+  if (!el) return;
+  el.textContent = list.length ? ('มีข้อมูลค้างส่ง '+list.length+' รายการ') : 'ไม่มีข้อมูลค้างส่ง';
+}
+function retryPendingSessions(){
+  var list = lsGet(LS_KEYS.pendingSessions, []);
+  if (!list.length){ toast('ไม่มีข้อมูลค้างส่ง'); return; }
+  if (!isApiConfigured()){ toast('ยังไม่ได้ตั้งค่า Backend','error'); return; }
+  toast('กำลังลองบันทึกข้อมูลที่ค้างอยู่…');
+  var remaining = [];
+  var chain = list.reduce(function(p, item){
+    return p.then(function(){
+      return serverCall('saveSession', item.session).then(function(){
+        return flushEventsList(item.events);
+      }).catch(function(){ remaining.push(item); });
+    });
+  }, Promise.resolve());
+  chain.then(function(){
+    lsSet(LS_KEYS.pendingSessions, remaining);
+    updatePendingSessionInfoUi();
+    toast(remaining.length ? ('ยังเหลือ '+remaining.length+' รายการที่บันทึกไม่สำเร็จ') : 'บันทึกข้อมูลที่ค้างอยู่สำเร็จทั้งหมด','success');
+  });
+}
+function downloadPendingCsv(){
+  var list = lsGet(LS_KEYS.pendingSessions, []);
+  if (!list.length){ toast('ไม่มีข้อมูลค้างส่ง'); return; }
+  var headers = ['sessionId','savedAt','appMode','userId','name','activityMode','totalSeconds','goodSeconds','badSeconds','unknownSeconds','score','alertCount','mainIssue','startedAt','endedAt'];
+  var rows = list.map(function(item){
+    var s = item.session;
+    return headers.map(function(h){ return csvEscape(s[h]); }).join(',');
+  });
+  var csv = headers.join(',') + '\n' + rows.join('\n');
+  downloadTextFile(csv, 'SmartFlex_Pending.csv', 'text/csv;charset=utf-8;');
+}
+
+function saveSessionToBackend(summary){
+  var profile = lsGet(LS_KEYS.profile, {}) || {};
+  var sessionPayload = {
+    sessionId: summary.sessionId, appMode: sessionState.mode,
+    userId: profile.userId||'', name: profile.name||'', age: profile.age||'', role: profile.role||'',
+    activityMode: profile.activity||'', organization: profile.organization||'', className: profile.className||'',
+    deviceType: profile.device||'', cameraType: cameraTypeChip.get()||'', cameraAngle: sessionState.cameraAngle||'',
+    totalSeconds: Math.round(summary.totalSeconds), goodSeconds: Math.round(summary.goodSeconds),
+    badSeconds: Math.round(summary.badSeconds), unknownSeconds: Math.round(summary.unknownSeconds),
+    score: summary.score, alertCount: summary.alertCount, mainIssue: summary.mainIssue.label,
+    forwardHeadCount: sessionState.forwardHeadCount, slouchCount: sessionState.slouchCount,
+    shoulderTiltCount: sessionState.shoulderTiltCount, elbowAngleIssueCount: sessionState.elbowAngleIssueCount,
+    kneeAngleIssueCount: sessionState.kneeAngleIssueCount, screenDistanceIssueCount: sessionState.screenDistanceIssueCount,
+    eyeBreakCount: sessionState.eyeBreakCount, postureBreakCount: sessionState.postureBreakCount,
+    stretchBreakCount: sessionState.stretchBreakCount, improvementAdvice: summary.advice,
+    startedAt: sessionState.startedAt, endedAt: sessionState.endedAt, notes:''
+  };
+  var eventsSnapshot = sessionEventsBuffer.slice();
+  sessionEventsBuffer = [];
+
+  if (!isApiConfigured()){
+    queuePendingSession(sessionPayload, eventsSnapshot);
+    updateSaveStatusUi(false, 'ยังไม่ได้ตั้งค่า Backend ระบบเก็บข้อมูลไว้ในเครื่องแล้ว');
+    return Promise.resolve();
+  }
+
+  var userSavePromise = profile.userId
+    ? serverCall('saveOrUpdateUser', { userId: profile.userId, name: profile.name, age: profile.age, role: profile.role, organization: profile.organization, className: profile.className }).catch(function(){})
+    : Promise.resolve();
+
+  return userSavePromise.then(function(){
+    return serverCall('saveSession', sessionPayload);
+  }).then(function(res){
+    return flushEventsList(eventsSnapshot).then(function(){
+      var dup = res && res.data && res.data.duplicate;
+      updateSaveStatusUi(true, dup ? 'ข้อมูลนี้ถูกบันทึกไว้แล้ว' : 'บันทึกสำเร็จ');
+      toast('บันทึกผลสำเร็จ','success');
+    });
+  }).catch(function(err){
+    queuePendingSession(sessionPayload, eventsSnapshot);
+    updateSaveStatusUi(false, 'บันทึกไม่สำเร็จ: '+err.message);
+    toast('บันทึกไม่สำเร็จ ระบบเก็บข้อมูลไว้ในเครื่องแล้ว','error');
+  });
+}
+
+/* ======================================================================
+   22. หน้าผลย้อนหลัง
+   ====================================================================== */
+var currentReportData = null;
+var trendChartInstance = null, issueChartInstance = null;
+var chartJsLoadPromise = null;
+
+function getFilterPayload(){
+  return {
+    userId: $('filterUserId').value.trim(), mode: $('filterMode').value,
+    organization: $('filterOrg').value.trim(), className: $('filterClass').value.trim(),
+    dateFrom: $('filterDateFrom').value || '', dateTo: $('filterDateTo').value || ''
+  };
+}
+function loadHistory(){
+  $('historyLoadingState').style.display='block';
+  $('historyLoadingState').textContent='กำลังโหลดข้อมูล…';
+  $('historyEmptyState').style.display='none';
+  $('historyTable').style.display='none';
+
+  if (!isApiConfigured()){
+    $('historyLoadingState').style.display='none';
+    $('historyEmptyState').style.display='block';
+    $('historyEmptyState').textContent = 'ยังไม่ได้ตั้งค่า Backend (สำหรับผู้ดูแลระบบ) จึงยังไม่มีข้อมูลย้อนหลัง';
+    renderKpi({});
+    return;
+  }
+  serverCall('getReportData', getFilterPayload()).then(function(res){
+    currentReportData = (res && res.data) || {kpi:{},sessions:[],issueTotals:{},trend:[]};
+    renderKpi(currentReportData.kpi);
+    renderHistoryTable(currentReportData.sessions);
+    loadChartJsThenRender();
+  }).catch(function(err){
+    $('historyLoadingState').style.display='none';
+    $('historyEmptyState').style.display='block';
+    $('historyEmptyState').textContent = 'โหลดข้อมูลไม่สำเร็จ: '+err.message;
+    toast('โหลดผลย้อนหลังไม่สำเร็จ','error');
+  });
+}
+function renderKpi(kpi){
+  kpi = kpi||{};
+  $('kpiCount').textContent = kpi.count||0;
+  $('kpiAvgScore').textContent = (kpi.avgScore!==undefined)?kpi.avgScore:'-';
+  $('kpiTotalTime').textContent = formatSeconds(kpi.totalSeconds||0);
+  $('kpiAlerts').textContent = kpi.alertCount||0;
+  $('kpiGood').textContent = formatSeconds(kpi.goodSeconds||0);
+  $('kpiBad').textContent = formatSeconds(kpi.badSeconds||0);
+  $('kpiUnknown').textContent = formatSeconds(kpi.unknownSeconds||0);
+}
+function renderHistoryTable(sessions){
+  $('historyLoadingState').style.display='none';
+  sessions = sessions||[];
+  if (!sessions.length){
+    $('historyEmptyState').style.display='block';
+    $('historyEmptyState').textContent='ยังไม่พบข้อมูลที่ตรงกับตัวกรอง';
+    $('historyTable').style.display='none';
+    return;
+  }
+  $('historyEmptyState').style.display='none';
+  $('historyTable').style.display='table';
+  $('historyTableBody').innerHTML = sessions.map(function(s){
+    return '<tr>'
+      + '<td>'+escapeHtml(formatDisplayDate(s.startedAt||s.savedAt))+'</td>'
+      + '<td>'+escapeHtml(String(s.sessionId||'').slice(0,10))+'…</td>'
+      + '<td>'+(s.appMode==='personal'?'ส่วนบุคคล':'ห้องเรียน')+'</td>'
+      + '<td>'+escapeHtml(s.name || s.className || s.userId || '-')+'</td>'
+      + '<td>'+escapeHtml(s.activityMode||'-')+'</td>'
+      + '<td>'+formatSeconds(s.totalSeconds)+'</td>'
+      + '<td>'+s.score+'</td>'
+      + '<td>'+formatSeconds(s.goodSeconds)+'</td>'
+      + '<td>'+formatSeconds(s.badSeconds)+'</td>'
+      + '<td>'+formatSeconds(s.unknownSeconds)+'</td>'
+      + '<td>'+(s.alertCount||0)+'</td>'
+      + '<td>'+escapeHtml(s.mainIssue||'-')+'</td>'
+      + '<td><button type="button" class="btn btn-ghost" data-session-id="'+escapeHtml(s.sessionId)+'">ดูรายละเอียด</button></td>'
+      + '</tr>';
+  }).join('');
+}
+function loadChartJsThenRender(){
+  if (window.Chart){ renderCharts(); return; }
+  if (!chartJsLoadPromise) chartJsLoadPromise = loadScriptWithFallback(CDN_SOURCES.chartJs, 'Chart');
+  chartJsLoadPromise.then(renderCharts).catch(function(){
+    $('trendChartFallback').style.display='block';
+    $('issueChartFallback').style.display='block';
+  });
+}
+function renderCharts(){
+  if (!window.Chart || !currentReportData) return;
+  try {
+    var trend = currentReportData.trend||[];
+    if (trendChartInstance) trendChartInstance.destroy();
+    trendChartInstance = new Chart($('trendChart').getContext('2d'), {
+      type:'line',
+      data:{ labels: trend.map(function(t){return t.date;}), datasets:[{ label:'คะแนน', data: trend.map(function(t){return t.score;}), borderColor:'#16A34A', backgroundColor:'rgba(22,163,74,0.15)', tension:0.3, fill:true }] },
+      options:{ responsive:true, maintainAspectRatio:false, scales:{ y:{min:0,max:100} } }
+    });
+    var issueTotals = currentReportData.issueTotals||{};
+    var labels = Object.keys(issueTotals);
+    if (issueChartInstance) issueChartInstance.destroy();
+    issueChartInstance = new Chart($('issueChart').getContext('2d'), {
+      type:'bar',
+      data:{ labels: labels, datasets:[{ label:'จำนวนครั้ง', data: labels.map(function(l){return issueTotals[l];}), backgroundColor:'#22C55E' }] },
+      options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false} } }
+    });
+    $('trendChartFallback').style.display='none';
+    $('issueChartFallback').style.display='none';
+  } catch(err){
+    $('trendChartFallback').style.display='block';
+    $('issueChartFallback').style.display='block';
+  }
+}
+function openSessionDetail(sessionId){
+  openModal('<div class="empty-state">กำลังโหลดรายละเอียด…</div>');
+  serverCall('getSessionDetail', {sessionId:sessionId}).then(function(res){
+    renderSessionDetailModal(res.data);
+  }).catch(function(err){
+    openModal('<div class="empty-state">โหลดรายละเอียดไม่สำเร็จ: '+escapeHtml(err.message)+'</div>');
+  });
+}
+function renderSessionDetailModal(data){
+  var s = (data && data.session) || {};
+  var events = (data && data.events) || [];
+  var html = '<h2>รายละเอียด Session</h2>'
+    + '<div class="summary-list">'
+    + summaryRow('UserID', escapeHtml(s.UserID||'-'))
+    + summaryRow('ชื่อ/ห้อง', escapeHtml(s.Name||s.ClassName||'-'))
+    + summaryRow('โหมด', s.AppMode==='personal'?'ส่วนบุคคล':'ห้องเรียน')
+    + summaryRow('เริ่ม/สิ้นสุด', escapeHtml(formatDisplayDate(s.StartedAt))+' - '+escapeHtml(formatDisplayDate(s.EndedAt)))
+    + summaryRow('คะแนน', s.Score)
+    + summaryRow('เวลาท่าดี/ควรปรับ/ไม่ชัด', formatSeconds(s.GoodSeconds)+' / '+formatSeconds(s.BadSeconds)+' / '+formatSeconds(s.UnknownSeconds))
+    + summaryRow('จำนวน Alert', s.AlertCount)
+    + summaryRow('ปัญหาหลัก', escapeHtml(s.MainIssue||'-'))
+    + summaryRow('อุปกรณ์', escapeHtml(s.DeviceType||'-'))
+    + summaryRow('มุมกล้อง', escapeHtml(s.CameraAngle||'-'))
+    + '</div>'
+    + '<h3 style="margin-top:14px;">คำแนะนำ</h3><p>'+escapeHtml(s.ImprovementAdvice||'-')+'</p>'
+    + '<h3>Events ที่บันทึก ('+events.length+')</h3>'
+    + '<div class="table-scroll"><table class="data-table"><thead><tr><th>เวลา</th><th>ปัญหา</th><th>ระดับ</th><th>ข้อความ</th></tr></thead><tbody>'
+    + events.map(function(ev){
+        return '<tr><td>'+escapeHtml(formatDisplayDate(ev.eventTime))+'</td><td>'+escapeHtml(ev.issue)+'</td><td>'+escapeHtml(ev.severity)+'</td><td>'+escapeHtml(ev.message)+'</td></tr>';
+      }).join('')
+    + '</tbody></table></div>';
+  openModal(html);
+}
+
+/* ======================================================================
+   23. ผูก Event ปุ่มต่าง ๆ
+   ====================================================================== */
+$('btnTestDevice').addEventListener('click', function(){ openCameraFlow(true); });
+$('btnOpenCamera').addEventListener('click', function(){ openCameraFlow(false); });
+
+$('btnSetBaseline').addEventListener('click', startBaselineCapture);
+$('btnStartCheck').addEventListener('click', startMonitoring);
+$('btnPause').addEventListener('click', pauseMonitoring);
+$('btnResume').addEventListener('click', resumeMonitoring);
+$('btnEndSave').addEventListener('click', endAndSave);
+$('btnStopCamera').addEventListener('click', function(){
+  if (!confirmLeaveIfRunning()) return;
+  showPage('start');
+});
+$('btnBackFromCamera').addEventListener('click', function(){
+  if (!confirmLeaveIfRunning()) return;
+  showPage('start');
+});
+
+$('modalCloseBtn').addEventListener('click', closeModal);
+$('modalBackdrop').addEventListener('click', function(e){ if (e.target===this) closeModal(); });
+document.addEventListener('keydown', function(e){ if (e.key==='Escape') closeModal(); });
+$('modalContent').addEventListener('click', function(e){
+  var btn = e.target.closest('[data-action]');
+  if (!btn) return;
+  var action = btn.getAttribute('data-action');
+  if (action==='back-to-start'){ closeModal(); showPage('start'); }
+  else if (action==='go-history'){ closeModal(); showPage('history'); }
+});
+$('historyTableBody').addEventListener('click', function(e){
+  var btn = e.target.closest('[data-session-id]');
+  if (!btn) return;
+  openSessionDetail(btn.getAttribute('data-session-id'));
+});
+
+$('btnSearchHistory').addEventListener('click', loadHistory);
+$('btnClearFilter').addEventListener('click', function(){
+  $('filterUserId').value=''; $('filterMode').value='all'; $('filterOrg').value='';
+  $('filterClass').value=''; $('filterDateFrom').value=''; $('filterDateTo').value='';
+  loadHistory();
+});
+['filterUserId','filterOrg','filterClass'].forEach(function(id){
+  $(id).addEventListener('keydown', function(e){ if (e.key==='Enter') loadHistory(); });
+});
+$('btnExportCsv').addEventListener('click', function(){
+  if (!currentReportData || !currentReportData.sessions || !currentReportData.sessions.length){
+    toast('ไม่มีข้อมูลให้ส่งออกในขณะนี้'); return;
+  }
+  var headers = ['วันที่เริ่ม','SessionID','โหมด','ผู้ใช้/ห้อง','กิจกรรม','เวลารวม(วินาที)','คะแนน','ท่าดี(วินาที)','ควรปรับ(วินาที)','ไม่ชัด(วินาที)','Alert','ปัญหาหลัก'];
+  var rows = currentReportData.sessions.map(function(s){
+    return [s.startedAt, s.sessionId, s.appMode, (s.name||s.className||s.userId||''), s.activityMode, s.totalSeconds, s.score, s.goodSeconds, s.badSeconds, s.unknownSeconds, s.alertCount, s.mainIssue].map(csvEscape).join(',');
+  });
+  var csv = headers.join(',')+'\n'+rows.join('\n');
+  var userId = $('filterUserId').value.trim();
+  var filename = 'SmartFlex_' + (userId ? userId.replace(/[^a-zA-Z0-9_-]/g,'') : 'ALL') + '.csv';
+  downloadTextFile(csv, filename, 'text/csv;charset=utf-8;');
+});
+$('btnPrintReport').addEventListener('click', function(){ window.print(); });
+$('btnRetryPending').addEventListener('click', retryPendingSessions);
+$('btnDownloadPendingCsv').addEventListener('click', downloadPendingCsv);
+
+qsa('[data-nav]').forEach(function(btn){
+  btn.addEventListener('click', function(){
+    var target = btn.getAttribute('data-nav');
+    var onCameraPage = $('page-camera').classList.contains('active');
+    if (onCameraPage && sessionState.running && !confirmLeaveIfRunning()) return;
+    showPage(target);
+  });
+});
+[$('statusPillTop'), $('statusPillStart'), $('statusPillSettings')].forEach(function(el){
+  if (el) el.addEventListener('click', checkBackendConnection);
+});
+
+window.addEventListener('beforeunload', function(){ stopCameraFlow(); });
+document.addEventListener('visibilitychange', function(){
+  if (document.hidden && window.speechSynthesis) window.speechSynthesis.cancel();
+});
+
+/* ======================================================================
+   24. เริ่มต้นระบบ
+   ====================================================================== */
+function init(){
+  videoEl = $('videoEl');
+  overlayCanvasEl = $('overlayCanvas');
+  overlayCtx = overlayCanvasEl.getContext('2d');
+  cameraStageEl = $('cameraStage');
+
+  initAdminWarning();
+  loadProfileIntoForm();
+  loadCameraSoundSettings();
+  updatePendingSessionInfoUi();
+  $('aboutVersion').textContent = APP_VERSION;
+  checkBackendConnection();
+}
+init();
+
+})();
+</script>
+</body>
+</html>
