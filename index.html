@@ -331,6 +331,15 @@ table.data-table th{color:var(--ink-soft);font-weight:700;font-size:12px;}
 @media(prefers-reduced-motion: reduce){
   *{animation-duration:0.01ms !important;animation-iteration-count:1 !important;transition-duration:0.01ms !important;}
 }
+
+/* ===== SmartFlex 4.2: ฟังก์ชันห้องเรียนรายบุคคล + รายงานนักเรียน (คงธีมเดิม) ===== */
+.classroom-roster{margin-top:14px;padding:14px;border:1px solid var(--line);border-radius:var(--radius-md);background:var(--blue-50);display:none}
+.classroom-roster.show{display:block}.roster-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;margin-bottom:10px}.roster-head small{display:block;color:var(--ink-soft);font-size:11px;margin-top:3px}.roster-list{display:grid;grid-template-columns:1fr 1fr;gap:9px}.roster-row{display:grid;grid-template-columns:42px minmax(88px,.75fr) minmax(130px,1.25fr);gap:7px;align-items:center}.roster-seat{height:42px;border-radius:11px;background:var(--blue-100);color:var(--blue-700);display:grid;place-items:center;font-weight:800}.roster-row input{margin:0}.roster-note{margin-top:9px;font-size:11px;color:var(--ink-soft)}
+.student-history-card{margin-top:20px}.student-history-card .student-count{font-size:12px;color:var(--ink-soft)}
+.student-live-list{display:flex;flex-direction:column;gap:7px;margin-top:12px}.student-live-row{display:flex;justify-content:space-between;gap:8px;padding:8px 10px;background:var(--blue-50);border-radius:10px;font-size:12px}.student-live-row .score{font-weight:800}.student-live-row.good .score{color:var(--good)}.student-live-row.bad .score{color:var(--bad)}.student-live-row.unknown .score{color:var(--unknown)}
+.person-label{max-width:150px;overflow:hidden;text-overflow:ellipsis}
+@media(max-width:640px){.roster-list{grid-template-columns:1fr}.roster-row{grid-template-columns:38px 80px 1fr}.classroom-roster{padding:11px}}
+
 </style>
 </head>
 <body>
@@ -424,9 +433,18 @@ table.data-table th{color:var(--ink-soft);font-weight:700;font-size:12px;}
         <input type="text" id="inputClass" placeholder="เช่น ม.2/1" maxlength="60">
       </div>
       <div class="field">
-        <label for="inputHeadcount">จำนวนคนโดยประมาณ</label>
-        <input type="number" id="inputHeadcount" min="1" max="60" placeholder="เช่น 30">
+        <label for="inputHeadcount">จำนวนนักเรียนที่ตรวจ (สูงสุด 6 คน)</label>
+        <input type="number" id="inputHeadcount" min="1" max="6" value="4">
       </div>
+    </div>
+
+    <div class="classroom-roster" id="classroomRosterPanel">
+      <div class="roster-head">
+        <div><strong>รายชื่อนักเรียนในภาพ</strong><small>เรียงจากซ้ายไปขวาตามภาพกล้อง ระบบล็อกตำแหน่งเมื่อกดเริ่มตรวจ และไม่ใช้การจดจำใบหน้า</small></div>
+        <span class="badge status-unknown">สูงสุด 6 คน</span>
+      </div>
+      <div class="roster-list" id="classroomRosterList"></div>
+      <div class="roster-note">ควรให้นักเรียนนั่งตำแหน่งเดิมตลอด Session เพื่อให้ผลรายบุคคลไม่สลับกัน</div>
     </div>
 
     <div class="grid-2">
@@ -691,6 +709,17 @@ table.data-table th{color:var(--ink-soft);font-weight:700;font-size:12px;}
       </table>
     </div>
   </div>
+
+  <div class="card student-history-card" id="studentHistoryCard" style="display:none;">
+    <div class="card-title-row"><h3>ผลนักเรียนรายบุคคล (โหมดห้องเรียน)</h3><span class="student-count" id="studentHistoryCount">0 รายการ</span></div>
+    <div class="table-scroll">
+      <table class="data-table" id="studentHistoryTable">
+        <thead><tr><th>วันที่</th><th>รหัส/เลขที่</th><th>ชื่อ</th><th>ห้อง</th><th>ตำแหน่ง</th><th>คะแนน</th><th>ท่าดี</th><th>ควรปรับ</th><th>ไม่ชัด</th><th>Alert</th><th>ปัญหาหลัก</th><th></th></tr></thead>
+        <tbody id="studentHistoryBody"></tbody>
+      </table>
+    </div>
+    <div class="btn-row" style="margin-top:12px;"><button type="button" class="btn btn-secondary" id="btnExportStudentsCsv">⬇️ ส่งออกผลนักเรียน CSV</button></div>
+  </div>
 </section>
 
 <!-- ======================= หน้าตั้งค่า ======================= -->
@@ -813,7 +842,7 @@ table.data-table th{color:var(--ink-soft);font-weight:700;font-size:12px;}
    1. CONFIG
    ====================================================================== */
 var APP_NAME = 'SmartFlex';
-var APP_VERSION = '1.0.1';
+var APP_VERSION = '4.2.0-theme-sync';
 var APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwr7hSpr-s8A_55yfKgrZWRp3fh5mD-_L9JcgWk8hU3ZXeOoxV0Yukp2GFRmiOC6w5SBg/exec'; // ผู้ดูแลระบบ: แก้เป็น URL จาก Deploy ที่ลงท้ายด้วย /exec
 var GITHUB_REPOSITORY = '[GITHUB_REPOSITORY]';
 
@@ -1014,6 +1043,21 @@ function jsonpCall(action, dataObj, timeoutMs){
   });
 }
 function serverCall(action, dataObj){ return jsonpCall(action, dataObj); }
+function formPostCall(action,dataObj,timeoutMs){
+  return new Promise(function(resolve,reject){
+    var check=validateAppsScriptUrl(APPS_SCRIPT_URL);if(!check.valid){reject(new Error(check.reason));return;}
+    var token='smartflex_post_'+Date.now()+'_'+Math.random().toString(36).slice(2),iframe=document.createElement('iframe'),form=document.createElement('form');
+    iframe.name=token;iframe.style.display='none';form.method='POST';form.action=APPS_SCRIPT_URL;form.target=token;form.style.display='none';
+    var a=document.createElement('input');a.name='action';a.value=action;var d=document.createElement('input');d.name='data';d.value=JSON.stringify(dataObj||{});form.appendChild(a);form.appendChild(d);
+    var done=false,submitted=false,timer=setTimeout(function(){cleanup(new Error('ส่งข้อมูลไป Apps Script ใช้เวลานานเกินไป'));},timeoutMs||30000);
+    function cleanup(err){if(done)return;done=true;clearTimeout(timer);setTimeout(function(){form.remove();iframe.remove();},50);err?reject(err):resolve({submitted:true});}
+    iframe.addEventListener('load',function(){if(submitted)setTimeout(function(){cleanup();},250);});document.body.appendChild(iframe);document.body.appendChild(form);submitted=true;try{form.submit();}catch(e){cleanup(e);}
+  });
+}
+function waitForSaveStatus(sessionId,expectedEvents,expectedStudents){
+  var attempt=0,last=null;return new Promise(function(resolve,reject){function check(){attempt++;serverCall('getSaveStatus',{sessionId:sessionId}).then(function(res){last=res&&res.data; if(last&&last.sessionSaved&&Number(last.eventCount||0)>=Number(expectedEvents||0)&&Number(last.studentCount||0)>=Number(expectedStudents||0)){resolve(last);return;} if(attempt>=18){reject(new Error('ส่งข้อมูลแล้ว แต่ยังยืนยันการบันทึกไม่ครบ'));return;}setTimeout(check,attempt<3?700:1200);}).catch(function(){if(attempt>=18){reject(new Error('ตรวจสอบสถานะการบันทึกไม่สำเร็จ'));return;}setTimeout(check,1200);});}setTimeout(check,500);});
+}
+
 
 function setBackendState(state, message){
   var dots = [$('statusDotTop'), $('statusDotStart'), $('statusDotSettings')];
@@ -1042,15 +1086,7 @@ function checkBackendConnection(){
 }
 
 function loadServerSettings(){
-  serverCall('getSettings').then(function(res){
-    if (res && res.data && res.data.settings){
-      Object.keys(res.data.settings).forEach(function(k){
-        var v = Number(res.data.settings[k]);
-        if (!isNaN(v)) SETTINGS[k] = v;
-      });
-      if (res.data.settings.APP_VERSION) $('aboutVersion').textContent = res.data.settings.APP_VERSION;
-    }
-  }).catch(function(){ /* ใช้ค่าเริ่มต้นในเครื่องต่อไปได้ */ });
+  serverCall('getSettings').then(function(res){var settings=res&&res.data&&(res.data.settings||res.data);if(settings){Object.keys(settings).forEach(function(k){if(k==='APP_VERSION')return;var v=Number(settings[k]);if(!isNaN(v)){if(k==='MIN_DATA_COVERAGE'&&v<=1)v*=100;SETTINGS[k]=v;}});if(settings.APP_VERSION)$('aboutVersion').textContent=settings.APP_VERSION;}}).catch(function(){});
 }
 
 function initAdminWarning(){
@@ -1137,6 +1173,8 @@ var modeChip = wireChipGroup('modeChoice','data-mode', function(v){
   $('personalFields').style.display = v==='personal' ? 'grid' : 'none';
   $('classroomFields').style.display = v==='classroom' ? 'grid' : 'none';
   $('angleFieldWrap').style.display = v==='personal' ? 'block' : 'none';
+  $('classroomRosterPanel').classList.toggle('show', v==='classroom');
+  if (v==='classroom') renderClassroomRoster();
   saveProfileFromForm();
 });
 var activityChip = wireChipGroup('activityChoice','data-activity', function(){ saveProfileFromForm(); });
@@ -1148,6 +1186,34 @@ var angleChip = wireChipGroup('angleChoice','data-angle', function(v){ updateAng
 var settingCameraTypeChip = wireChipGroup('settingCameraType','data-camtype', function(v){ cameraTypeChip.set(v); persistCameraPrefs(); });
 var settingResolutionChip = wireChipGroup('settingResolution','data-res', function(v){ resolutionChip.set(v); persistCameraPrefs(); });
 var settingSensitivityChip = wireChipGroup('settingSensitivity','data-sens', function(v){ sensitivityChip.set(v); persistCameraPrefs(); });
+
+/* ===== รายชื่อนักเรียนโหมดห้องเรียน ===== */
+function normalizeRosterCount(){
+  var n = parseInt($('inputHeadcount').value,10);
+  if (!Number.isFinite(n)) n = 4;
+  n = clamp(n,1,6); $('inputHeadcount').value = n; return n;
+}
+function getRosterFromDom(){
+  var rows = qsa('.roster-row', $('classroomRosterList'));
+  return rows.map(function(row,i){
+    return { studentId:((row.querySelector('[data-student-id]')||{}).value||'').trim(), studentName:((row.querySelector('[data-student-name]')||{}).value||'').trim() };
+  });
+}
+function renderClassroomRoster(source){
+  var count = normalizeRosterCount();
+  var profile = lsGet(LS_KEYS.profile,{}) || {};
+  var roster = Array.isArray(source) ? source : (Array.isArray(profile.students) ? profile.students : []);
+  var html='';
+  for (var i=0;i<count;i++){
+    var st=roster[i]||{};
+    html += '<div class="roster-row" data-seat="'+(i+1)+'"><div class="roster-seat">P'+(i+1)+'</div>'
+      + '<input type="text" data-student-id maxlength="40" placeholder="เลขที่/รหัส" value="'+escapeHtml(st.studentId||'')+'">'
+      + '<input type="text" data-student-name maxlength="80" placeholder="ชื่อนักเรียน" value="'+escapeHtml(st.studentName||'')+'"></div>';
+  }
+  $('classroomRosterList').innerHTML=html;
+  qsa('input',$('classroomRosterList')).forEach(function(el){ el.addEventListener('change',saveProfileFromForm); });
+}
+$('inputHeadcount').addEventListener('change', function(){ renderClassroomRoster(getRosterFromDom()); saveProfileFromForm(); });
 
 /* ======================================================================
    7. โปรไฟล์ผู้ใช้ (Local Storage)
@@ -1163,13 +1229,15 @@ function loadProfileIntoForm(){
     if (p.role) $('inputRole').value = p.role;
     if (p.organization) $('inputOrg').value = p.organization;
     if (p.className) $('inputClass').value = p.className;
-    if (p.headcount) $('inputHeadcount').value = p.headcount;
+    if (p.headcount) $('inputHeadcount').value = clamp(parseInt(p.headcount,10)||4,1,6);
     if (p.device) $('inputDevice').value = p.device;
     if (p.angle) angleChip.set(p.angle);
   }
   $('personalFields').style.display = (modeChip.get()==='personal') ? 'grid':'none';
   $('classroomFields').style.display = (modeChip.get()==='classroom') ? 'grid':'none';
   $('angleFieldWrap').style.display = (modeChip.get()==='personal') ? 'block':'none';
+  $('classroomRosterPanel').classList.toggle('show', modeChip.get()==='classroom');
+  renderClassroomRoster(p && p.students);
   updateAngleInstruction(angleChip.get());
   updateCurrentUserDisplay();
 }
@@ -1179,7 +1247,8 @@ function saveProfileFromForm(){
     mode: modeChip.get(), activity: activityChip.get(),
     age: $('inputAge').value, role: $('inputRole').value,
     organization: $('inputOrg').value.trim(), className: $('inputClass').value.trim(),
-    headcount: $('inputHeadcount').value, device: $('inputDevice').value, angle: angleChip.get()
+    headcount: normalizeRosterCount(), device: $('inputDevice').value, angle: angleChip.get(),
+    students: modeChip.get()==='classroom' ? getRosterFromDom() : ((lsGet(LS_KEYS.profile,{})||{}).students||[])
   };
   lsSet(LS_KEYS.profile, p);
   updateCurrentUserDisplay();
@@ -1456,8 +1525,8 @@ var ISSUE_LABELS = {
   armSpreadRatio:'ต้นแขนกางมากเกินไป', distance:'ระยะจากกล้อง/จอควรปรับ'
 };
 var COUNT_FIELD_MAP = {
-  forwardHead:'forwardHeadCount', torsoLean:'slouchCount', shoulderTilt:'shoulderTiltCount',
-  elbowAngle:'elbowAngleIssueCount', kneeAngle:'kneeAngleIssueCount', distance:'screenDistanceIssueCount'
+  forwardHead:'forwardHeadCount', headTilt:'headTiltCount', torsoLean:'slouchCount', shoulderTilt:'shoulderTiltCount',
+  elbowAngle:'elbowAngleIssueCount', kneeAngle:'kneeAngleIssueCount', armSpreadRatio:'upperArmIssueCount', distance:'screenDistanceIssueCount'
 };
 var RELEVANT_METRICS_BY_ANGLE = {
   straight: ['forwardHead','headTilt','shoulderTilt','elbowAngle','kneeAngle'],
@@ -1465,6 +1534,9 @@ var RELEVANT_METRICS_BY_ANGLE = {
   side: ['forwardHead','torsoLean','elbowAngle','kneeAngle']
 };
 var ALL_ISSUE_KEYS = ['forwardHead','headTilt','torsoLean','shoulderTilt','elbowAngle','kneeAngle','armSpreadRatio','distance'];
+var POSTURE_SCORE_WEIGHTS = { forwardHead:18, headTilt:8, torsoLean:20, shoulderTilt:10, elbowAngle:12, kneeAngle:12, armSpreadRatio:8, distance:5 };
+function scoreFromBadList(badList){ var score=100; (badList||[]).forEach(function(k){ score-=POSTURE_SCORE_WEIGHTS[k]||8; }); return clamp(Math.round(score),0,100); }
+
 
 function evaluateFromMetrics(rawMetrics, cameraAngle, sensitivity, baseline){
   var metrics = smoothMetrics(rawMetrics);
@@ -1480,13 +1552,9 @@ function evaluateFromMetrics(rawMetrics, cameraAngle, sensitivity, baseline){
   results.distance = distStatus;
   if (distStatus !== 'unknown') availableCount++;
   if (distStatus === 'bad') badList.push('distance');
-
-  var overall;
-  if (availableCount < 2) overall = 'unknown';
-  else if (badList.length > 0) overall = 'bad';
-  else overall = 'good';
-
-  return { metrics: metrics, results: results, overall: overall, badList: badList, distanceMessage: distanceMessage(metrics, baseline) };
+  var score = availableCount < 2 ? null : scoreFromBadList(badList);
+  var overall = score===null ? 'unknown' : (score>=80 ? 'good' : 'bad');
+  return { metrics: metrics, results: results, overall: overall, score:score, badList: badList, distanceMessage: distanceMessage(metrics, baseline) };
 }
 
 /* ======================================================================
@@ -1495,13 +1563,14 @@ function evaluateFromMetrics(rawMetrics, cameraAngle, sensitivity, baseline){
 var sessionState = {
   mode:null, sessionId:null, cameraAngle:null, sensitivity:'medium',
   running:false, paused:false, baselineDone:false, baseline:null,
-  totalSeconds:0, goodSeconds:0, badSeconds:0, unknownSeconds:0, alertCount:0,
+  totalSeconds:0, goodSeconds:0, badSeconds:0, unknownSeconds:0, scoredSeconds:0, scoreWeightedSum:0, alertCount:0,
   startedAt:null, endedAt:null,
-  forwardHeadCount:0, slouchCount:0, shoulderTiltCount:0, elbowAngleIssueCount:0,
-  kneeAngleIssueCount:0, screenDistanceIssueCount:0,
+  forwardHeadCount:0, headTiltCount:0, slouchCount:0, shoulderTiltCount:0, elbowAngleIssueCount:0,
+  kneeAngleIssueCount:0, upperArmIssueCount:0, screenDistanceIssueCount:0,
   eyeBreakCount:0, postureBreakCount:0, stretchBreakCount:0,
   breakTriggeredCount:{}, elapsedActiveSeconds:0,
-  classroomGoodObservations:0, classroomTotalObservations:0
+  classroomGoodObservations:0, classroomTotalObservations:0, classroomScoreSum:0, classroomScoreObservations:0,
+  classroomRoster:[], classroomStudentStats:[], classroomSeatCenters:[], classroomDistanceBaselines:[]
 };
 var cameraState = {
   active:false, stream:null, videoTrack:null, currentFacing:'user', animFrameId:null,
@@ -1509,6 +1578,7 @@ var cameraState = {
   fpsCounter:{count:0,lastTs:0,value:0}
 };
 var lastOverallStatus = 'unknown';
+var lastFrameScore = null;
 var lastEvalResult = null;
 var lastClassroomResults = [];
 var issueTrackers = {};
@@ -1901,21 +1971,18 @@ function updateFpsCounter(ts){
 function updateTimers(dt){
   sessionState.totalSeconds += dt;
   sessionState.elapsedActiveSeconds += dt;
-  if (lastOverallStatus==='good') sessionState.goodSeconds += dt;
-  else if (lastOverallStatus==='bad') sessionState.badSeconds += dt;
-  else sessionState.unknownSeconds += dt;
+  if (Number.isFinite(lastFrameScore)){
+    sessionState.scoredSeconds += dt;
+    sessionState.scoreWeightedSum += clamp(lastFrameScore,0,100)*dt;
+    if (lastFrameScore>=80) sessionState.goodSeconds += dt; else sessionState.badSeconds += dt;
+  } else sessionState.unknownSeconds += dt;
   var el = $('metricTimer'); if (el) el.textContent = formatSeconds(sessionState.totalSeconds);
 }
 function updateRealtimeScore(){
   var score;
-  if (sessionState.mode==='classroom'){
-    score = sessionState.classroomTotalObservations>0 ? Math.round(sessionState.classroomGoodObservations/sessionState.classroomTotalObservations*100) : null;
-  } else {
-    var denom = sessionState.goodSeconds+sessionState.badSeconds;
-    score = denom>0 ? Math.round(sessionState.goodSeconds/denom*100) : null;
-  }
-  var el = $('metricScore');
-  if (el) el.textContent = (score===null || !Number.isFinite(score)) ? '-' : clamp(score,0,100)+'%';
+  if (sessionState.mode==='classroom') score = sessionState.classroomScoreObservations>0 ? Math.round(sessionState.classroomScoreSum/sessionState.classroomScoreObservations) : null;
+  else score = sessionState.scoredSeconds>0 ? Math.round(sessionState.scoreWeightedSum/sessionState.scoredSeconds) : null;
+  var el = $('metricScore'); if (el) el.textContent = (score===null || !Number.isFinite(score)) ? '-' : clamp(score,0,100);
 }
 
 function updateMissingPartsUi(missingParts){
@@ -1975,48 +2042,59 @@ function updateClassroomBadges(results){
    18. การประมวลผลผลตรวจจับต่อเฟรม
    ====================================================================== */
 function handleClassroomFrame(poses){
-  var results = poses.map(function(p){
-    var raw = computeMetrics(p, 'straight');
-    return evaluateFromMetrics(raw, 'straight', sessionState.sensitivity, null);
-  });
-  var indexed = poses.map(function(p,i){ return { pose:p, result: results[i] }; });
-  indexed.sort(function(a,b){
-    var ax=(kp(a.pose,'left_hip')||kp(a.pose,'nose')||{x:0}).x;
-    var bx=(kp(b.pose,'left_hip')||kp(b.pose,'nose')||{x:0}).x;
-    return ax-bx;
-  });
-  lastClassroomResults = indexed;
-  updateClassroomLabelsUi(indexed);
-  updateClassroomBadges(results);
+  var roster = sessionState.classroomRoster || [];
+  var rect = getVideoDisplayRect();
+  function centerX(p){ var h=kp(p,'left_hip')||kp(p,'right_hip')||kp(p,'nose'); return h ? h.x : 0; }
+  var ordered=(poses||[]).slice().sort(function(a,b){ return centerX(a)-centerX(b); }).slice(0,Math.max(roster.length,1));
+  var assigned=[];
+  if (sessionState.running && sessionState.classroomSeatCenters.length){
+    assigned=new Array(roster.length).fill(null); var pairs=[];
+    (poses||[]).forEach(function(p,pi){ sessionState.classroomSeatCenters.forEach(function(c,si){ pairs.push({pi:pi,si:si,d:Math.abs(centerX(p)-c)}); }); });
+    pairs.sort(function(a,b){return a.d-b.d;}); var usedP={},usedS={};
+    var gap = roster.length>1 ? Math.max(80,(videoEl.videoWidth||640)/(roster.length+1)*0.65) : (videoEl.videoWidth||640)*0.35;
+    pairs.forEach(function(x){ if(x.d>gap||usedP[x.pi]||usedS[x.si])return; assigned[x.si]=poses[x.pi]; usedP[x.pi]=1;usedS[x.si]=1; });
+    assigned.forEach(function(p,i){if(p)sessionState.classroomSeatCenters[i]=sessionState.classroomSeatCenters[i]*0.96+centerX(p)*0.04;});
+  } else assigned=ordered;
 
-  if (sessionState.running && !sessionState.paused){
-    sessionState.classroomTotalObservations += results.length;
-    var goodCount = results.filter(function(r){return r.overall==='good';}).length;
-    var badCount = results.filter(function(r){return r.overall==='bad';}).length;
-    sessionState.classroomGoodObservations += goodCount;
-    lastOverallStatus = (badCount>0 && badCount>=goodCount) ? 'bad' : (goodCount>0 ? 'good' : 'unknown');
-    checkBreakReminders(sessionState.elapsedActiveSeconds);
-    updateRealtimeScore();
-  } else if (results.length===0){
-    lastOverallStatus = 'unknown';
+  var items=[], good=0,bad=0,unknown=0,known=0,totalScore=0, totalConfidence=0;
+  for(var i=0;i<roster.length;i++){
+    var pose=assigned[i]||null, st=roster[i]||{studentId:'P'+(i+1),studentName:'นักเรียน '+(i+1)}, stat=sessionState.classroomStudentStats[i];
+    if(!pose){ unknown++; if(sessionState.running&&stat)stat.unknownObservations++; items.push({pose:null,result:{overall:'unknown',score:null},student:st}); continue; }
+    var raw=computeMetrics(pose,'straight');
+    if(!sessionState.classroomDistanceBaselines[i] && raw.shoulderWidthPx) sessionState.classroomDistanceBaselines[i]={shoulderWidthPx:raw.shoulderWidthPx,torsoHeightPx:raw.torsoHeightPx};
+    var result=evaluateFromMetrics(raw,'straight',sessionState.sensitivity,sessionState.classroomDistanceBaselines[i]);
+    if(result.score===null){ unknown++; if(sessionState.running&&stat)stat.unknownObservations++; }
+    else {
+      known++; totalScore+=result.score; if(result.score>=80)good++;else bad++;
+      if(sessionState.running){
+        sessionState.classroomScoreSum += result.score; sessionState.classroomScoreObservations++;
+        sessionState.classroomTotalObservations++; if(result.score>=80)sessionState.classroomGoodObservations++;
+        if(stat){ stat.scoreSum+=result.score;stat.scoreObservations++; if(result.score>=80){stat.goodObservations++;stat.badSince=0;stat.badAlerted=false;} else {stat.badObservations++; if(!stat.badSince)stat.badSince=Date.now(); result.badList.forEach(function(k){stat.issueObservations[k]=(stat.issueObservations[k]||0)+1;}); if(!stat.badAlerted && Date.now()-stat.badSince>=SETTINGS.CRITICAL_SECONDS*1000){stat.alertCount++;stat.badAlerted=true;sessionState.alertCount++;sessionEventsBuffer.push({eventId:uuid(),sessionId:sessionState.sessionId,eventTime:new Date().toISOString(),eventType:'POSTURE_ALERT',issue:st.studentName,severity:'critical',message:'นักเรียน '+st.studentName+' ควรปรับท่า: '+result.badList.map(function(k){return ISSUE_LABELS[k]||k;}).slice(0,2).join(', '),durationSeconds:SETTINGS.CRITICAL_SECONDS});} }
+        }
+        result.badList.forEach(function(k){ incrementIssueCount(k); });
+      }
+    }
+    items.push({pose:pose,result:result,student:st});
   }
+  lastClassroomResults=items; updateClassroomLabelsUi(items);
+  var avg=known?Math.round(totalScore/known):null; lastFrameScore=avg;
+  lastOverallStatus=avg===null?'unknown':(avg>=80?'good':'bad');
+  $('badgeStatus').className='badge '+(avg===null?'status-unknown':avg>=80?'status-good':'status-bad');
+  $('badgeStatus').textContent=roster.length?('พบ '+(assigned.filter(Boolean).length)+'/'+roster.length+' คน'):'ยังไม่มีรายชื่อ';
+  $('badgeConfidence').textContent=avg===null?'คะแนนห้อง: -':'คะแนนห้อง: '+avg;
+  $('cameraHint').textContent=!roster.length?'กรุณากรอกรายชื่อนักเรียนก่อน':(assigned.filter(Boolean).length<roster.length?'ต้องเห็นนักเรียนครบ '+roster.length+' คนก่อนเริ่มตรวจ':(avg===null?'จัดตำแหน่งให้เห็นร่างกายชัดเจน':'คะแนนเฉลี่ยห้อง '+avg+' · ท่าดี '+good+' คน · ควรปรับ '+bad+' คน'));
+  $('btnStartCheck').disabled = sessionState.running ? true : !(roster.length>0 && assigned.filter(Boolean).length>=roster.length && known>=roster.length);
+  if(sessionState.running&&!sessionState.paused){ checkBreakReminders(sessionState.elapsedActiveSeconds); updateRealtimeScore(); }
 }
 function updateClassroomLabelsUi(items){
-  var container = $('classroomLabels');
-  if (!container) return;
-  var rect = getVideoDisplayRect();
-  container.innerHTML = items.map(function(item, idx){
-    var nose = kp(item.pose,'nose');
-    if (!nose) return '';
-    var x = rect.x + nose.x*rect.scale;
-    var y = Math.max(14, rect.y + nose.y*rect.scale - 22);
-    return '<div class="person-label" style="left:'+x+'px;top:'+y+'px;">คนที่ '+(idx+1)+'</div>';
-  }).join('');
+  var container=$('classroomLabels'); if(!container)return; var rect=getVideoDisplayRect();
+  container.innerHTML=(items||[]).map(function(item,idx){ if(!item.pose)return''; var nose=kp(item.pose,'nose')||kp(item.pose,'left_shoulder'); if(!nose)return''; var x=rect.x+nose.x*rect.scale,y=Math.max(14,rect.y+nose.y*rect.scale-22); var name=(item.student&&item.student.studentName)||('P'+(idx+1)); var score=item.result&&Number.isFinite(item.result.score)?' · '+item.result.score:''; return '<div class="person-label" style="left:'+x+'px;top:'+y+'px;">'+escapeHtml(name)+score+'</div>'; }).join('');
 }
 
 function handleDetectionResult(poses){
   cameraState.fpsCounter.count++;
   if (!poses || poses.length===0){
+    lastFrameScore = null;
     lastClassroomResults = [];
     if (sessionState.mode==='classroom'){
       var lbl = $('classroomLabels'); if (lbl) lbl.innerHTML='';
@@ -2033,6 +2111,7 @@ function handleDetectionResult(poses){
   maybeCollectBaselineSample(rawMetrics);
   var evalResult = evaluateFromMetrics(rawMetrics, sessionState.cameraAngle, sessionState.sensitivity, sessionState.baseline);
   lastOverallStatus = evalResult.overall;
+  lastFrameScore = Number.isFinite(evalResult.score) ? evalResult.score : null;
   lastEvalResult = evalResult;
 
   updateMissingPartsUi(findMissingParts(pose, sessionState.cameraAngle));
@@ -2093,56 +2172,30 @@ function cancelAnimationFrameLoop(){
    19. ควบคุมการเริ่ม/พัก/จบการตรวจ
    ====================================================================== */
 function updateCameraUiForMode(){
-  var personal = sessionState.mode === 'personal';
-  $('btnSetBaseline').style.display = personal ? 'inline-flex' : 'none';
-  $('btnStartCheck').disabled = personal ? !sessionState.baselineDone : false;
-  $('cameraModeLabel').textContent = personal ? 'โหมดส่วนบุคคล' : 'โหมดห้องเรียน / ภาพรวมหลายคน';
+  var personal=sessionState.mode==='personal';$('btnSetBaseline').style.display=personal?'inline-flex':'none';$('btnStartCheck').disabled=personal?!sessionState.baselineDone:true;$('cameraModeLabel').textContent=personal?'โหมดส่วนบุคคล':'โหมดห้องเรียน / รายบุคคลตามตำแหน่ง';
 }
 function resetSessionCounters(){
-  Object.assign(sessionState, {
-    running:false, paused:false, baselineDone:false, baseline:null,
-    totalSeconds:0, goodSeconds:0, badSeconds:0, unknownSeconds:0, alertCount:0,
-    forwardHeadCount:0, slouchCount:0, shoulderTiltCount:0, elbowAngleIssueCount:0,
-    kneeAngleIssueCount:0, screenDistanceIssueCount:0, eyeBreakCount:0, postureBreakCount:0,
-    stretchBreakCount:0, breakTriggeredCount:{}, elapsedActiveSeconds:0,
-    classroomGoodObservations:0, classroomTotalObservations:0, sessionId:null, startedAt:null, endedAt:null
-  });
-  sessionEventsBuffer = [];
-  resetIssueTrackers();
-  resetSmoothing();
-  $('btnSetBaseline').textContent = 'ตั้งท่ามาตรฐาน';
-  $('btnStartCheck').style.display = 'inline-flex';
-  $('btnPause').style.display = 'none';
-  $('btnResume').style.display = 'none';
-  $('btnEndSave').style.display = 'none';
-  $('metricTimer').textContent = '00:00';
-  $('metricScore').textContent = '-';
-  $('metricAlerts').textContent = '0';
-  $('missingPartsNotice').style.display = 'none';
-  updateSoundBadge();
-  var lbl = $('classroomLabels'); if (lbl) lbl.innerHTML='';
-  if (overlayCtx && overlayCanvasEl) overlayCtx.clearRect(0,0,overlayCanvasEl.width,overlayCanvasEl.height);
+  Object.assign(sessionState,{running:false,paused:false,baselineDone:false,baseline:null,totalSeconds:0,goodSeconds:0,badSeconds:0,unknownSeconds:0,scoredSeconds:0,scoreWeightedSum:0,alertCount:0,forwardHeadCount:0,headTiltCount:0,slouchCount:0,shoulderTiltCount:0,elbowAngleIssueCount:0,kneeAngleIssueCount:0,upperArmIssueCount:0,screenDistanceIssueCount:0,eyeBreakCount:0,postureBreakCount:0,stretchBreakCount:0,breakTriggeredCount:{},elapsedActiveSeconds:0,classroomGoodObservations:0,classroomTotalObservations:0,classroomScoreSum:0,classroomScoreObservations:0,sessionId:null,startedAt:null,endedAt:null,classroomSeatCenters:[],classroomDistanceBaselines:[]});
+  lastFrameScore=null; sessionEventsBuffer=[];resetIssueTrackers();resetSmoothing();
+  $('btnSetBaseline').textContent='ตั้งท่ามาตรฐาน';$('btnStartCheck').style.display='inline-flex';$('btnPause').style.display='none';$('btnResume').style.display='none';$('btnEndSave').style.display='none';$('metricTimer').textContent='00:00';$('metricScore').textContent='-';$('metricAlerts').textContent='0';$('missingPartsNotice').style.display='none';updateSoundBadge();var lbl=$('classroomLabels');if(lbl)lbl.innerHTML='';if(overlayCtx&&overlayCanvasEl)overlayCtx.clearRect(0,0,overlayCanvasEl.width,overlayCanvasEl.height);
 }
 
+function makeStudentStat(st,i){ return {studentId:st.studentId,studentName:st.studentName,seatOrder:i+1,goodObservations:0,badObservations:0,unknownObservations:0,scoreSum:0,scoreObservations:0,alertCount:0,badSince:0,badAlerted:false,issueObservations:{forwardHead:0,headTilt:0,torsoLean:0,shoulderTilt:0,elbowAngle:0,kneeAngle:0,armSpreadRatio:0,distance:0}}; }
+function buildStudentResults(){
+  var p=lsGet(LS_KEYS.profile,{})||{};
+  return (sessionState.classroomStudentStats||[]).map(function(s,i){ var known=s.goodObservations+s.badObservations,total=known+s.unknownObservations,rank=Object.keys(s.issueObservations).sort(function(a,b){return (s.issueObservations[b]||0)-(s.issueObservations[a]||0);}),main=rank.length&&s.issueObservations[rank[0]]>0?rank[0]:''; return {sessionId:sessionState.sessionId,studentId:s.studentId||('P'+(i+1)),studentName:s.studentName||('นักเรียน '+(i+1)),seatOrder:i+1,organization:p.organization||'',className:p.className||'',totalObservations:total,goodObservations:s.goodObservations,badObservations:s.badObservations,unknownObservations:s.unknownObservations,score:s.scoreObservations?Math.round(s.scoreSum/s.scoreObservations):0,alertCount:s.alertCount,mainIssue:main?(ISSUE_LABELS[main]||main):'ไม่พบปัญหาเด่น',forwardHeadObservations:s.issueObservations.forwardHead||0,headTiltObservations:s.issueObservations.headTilt||0,slouchObservations:s.issueObservations.torsoLean||0,shoulderTiltObservations:s.issueObservations.shoulderTilt||0,elbowAngleObservations:s.issueObservations.elbowAngle||0,kneeAngleObservations:s.issueObservations.kneeAngle||0,upperArmObservations:s.issueObservations.armSpreadRatio||0,screenDistanceObservations:s.issueObservations.distance||0,dataCoveragePercent:total?Math.round(known/total*100):0,scoringMethod:'average-person-observation-deduction-score',startedAt:sessionState.startedAt,endedAt:sessionState.endedAt,notes:'จับคู่ตามตำแหน่งที่นั่ง ไม่ใช้การจดจำใบหน้า'}; });
+}
 var monitoringStartLock = false;
 function startMonitoring(){
   if (monitoringStartLock) return;
-  if (sessionState.mode==='personal' && !sessionState.baselineDone){
-    toast('กรุณาตั้งท่ามาตรฐานก่อนเริ่มตรวจ','error');
-    return;
+  if (sessionState.mode==='personal' && !sessionState.baselineDone){ toast('กรุณาตั้งท่ามาตรฐานก่อนเริ่มตรวจ','error'); return; }
+  if (sessionState.mode==='classroom'){
+    var visible=(lastClassroomResults||[]).filter(function(x){return x.pose&&Number.isFinite(x.result.score);});
+    if (!sessionState.classroomRoster.length){toast('กรุณากรอกรายชื่อนักเรียนก่อน','error');return;}
+    if (visible.length<sessionState.classroomRoster.length){toast('ต้องเห็นนักเรียนครบทุกคนก่อนเริ่มตรวจ','error');return;}
+    sessionState.classroomSeatCenters=lastClassroomResults.map(function(x){var h=kp(x.pose,'left_hip')||kp(x.pose,'right_hip')||kp(x.pose,'nose');return h?h.x:0;});
   }
-  monitoringStartLock = true;
-  sessionState.running = true;
-  sessionState.paused = false;
-  sessionState.sessionId = uuid();
-  sessionState.startedAt = new Date().toISOString();
-  resetIssueTrackers();
-  sessionEventsBuffer = [];
-  $('btnStartCheck').style.display='none';
-  $('btnPause').style.display='inline-flex';
-  $('btnEndSave').style.display='inline-flex';
-  toast('เริ่มตรวจท่านั่งแล้ว','success');
-  setTimeout(function(){ monitoringStartLock=false; }, 600);
+  monitoringStartLock=true;sessionState.running=true;sessionState.paused=false;sessionState.sessionId=uuid();sessionState.startedAt=new Date().toISOString();resetIssueTrackers();sessionEventsBuffer=[];$('btnStartCheck').style.display='none';$('btnPause').style.display='inline-flex';$('btnEndSave').style.display='inline-flex';toast(sessionState.mode==='classroom'?'เริ่มตรวจและล็อกตำแหน่งนักเรียนแล้ว':'เริ่มตรวจท่านั่งแล้ว','success');setTimeout(function(){monitoringStartLock=false;},600);
 }
 function pauseMonitoring(){
   sessionState.paused = true;
@@ -2158,9 +2211,13 @@ function resumeMonitoring(){
 var cameraOpenLock = false;
 async function openCameraFlow(testOnly){
   if (cameraOpenLock) return;
-  if (!$('consentCheckbox').checked){
-    toast('กรุณายืนยันความยินยอมการใช้กล้องก่อน','error');
-    return;
+  if (!$('consentCheckbox').checked){ toast('กรุณายืนยันความยินยอมการใช้กล้องก่อน','error'); return; }
+  var startProfile = saveProfileFromForm();
+  if (!startProfile.name || !startProfile.userId){ toast('กรุณากรอกชื่อและรหัสผู้ใช้ก่อนเปิดกล้อง','error'); return; }
+  if (startProfile.mode==='classroom'){
+    if (!startProfile.organization || !startProfile.className){ toast('กรุณากรอกโรงเรียน/หน่วยงาน และชั้น/ห้อง','error'); return; }
+    var invalid=(startProfile.students||[]).some(function(s){return !String(s.studentId||'').trim() || !String(s.studentName||'').trim();});
+    if (invalid || !(startProfile.students||[]).length){ toast('กรุณากรอกรหัส/เลขที่และชื่อนักเรียนให้ครบทุกคน','error'); return; }
   }
   cameraOpenLock = true;
   try {
@@ -2170,6 +2227,9 @@ async function openCameraFlow(testOnly){
     sessionState.cameraAngle = sessionState.mode==='personal' ? angleChip.get() : 'straight';
     sessionState.sensitivity = sensitivityChip.get();
     resetSessionCounters();
+    var profileNow = lsGet(LS_KEYS.profile,{}) || {};
+    sessionState.classroomRoster = sessionState.mode==='classroom' ? (Array.isArray(profileNow.students)?profileNow.students:[]) : [];
+    sessionState.classroomStudentStats = sessionState.classroomRoster.map(makeStudentStat);
 
     showPage('camera');
     updateCameraUiForMode();
@@ -2196,18 +2256,14 @@ async function openCameraFlow(testOnly){
    20. คะแนน สรุปผล และการบันทึก
    ====================================================================== */
 function computeFinalScore(){
-  if (sessionState.mode==='classroom'){
-    var total = sessionState.classroomTotalObservations;
-    var good = sessionState.classroomGoodObservations;
-    return total>0 ? clamp(Math.round(good/total*100),0,100) : 0;
-  }
-  var denom = sessionState.goodSeconds + sessionState.badSeconds;
-  if (denom<=0) return 0;
-  return clamp(Math.round(sessionState.goodSeconds/denom*100),0,100);
+  if (sessionState.mode==='classroom') return sessionState.classroomScoreObservations>0 ? clamp(Math.round(sessionState.classroomScoreSum/sessionState.classroomScoreObservations),0,100) : 0;
+  return sessionState.scoredSeconds>0 ? clamp(Math.round(sessionState.scoreWeightedSum/sessionState.scoredSeconds),0,100) : 0;
 }
 function computeCoverage(){
-  if (sessionState.totalSeconds<=0) return 0;
-  return clamp(Math.round((sessionState.goodSeconds+sessionState.badSeconds)/sessionState.totalSeconds*100),0,100);
+  if (sessionState.mode==='classroom'){
+    var st=sessionState.classroomStudentStats||[],known=0,total=0;st.forEach(function(s){known+=s.goodObservations+s.badObservations;total+=s.goodObservations+s.badObservations+s.unknownObservations;});return total?clamp(Math.round(known/total*100),0,100):0;
+  }
+  if(sessionState.totalSeconds<=0)return 0;return clamp(Math.round(sessionState.scoredSeconds/sessionState.totalSeconds*100),0,100);
 }
 function determineMainIssue(){
   var top=null, topCount=0;
@@ -2263,7 +2319,7 @@ function buildSummaryData(score){
     badSeconds: sessionState.badSeconds, unknownSeconds: sessionState.unknownSeconds,
     alertCount: sessionState.alertCount, mainIssue: mainIssue, advice: advice,
     goodPoints: goodPoints, improvePoints: improvePoints, nextGoal: nextGoal,
-    issueCounts: getFullIssueCounts()
+    issueCounts: getFullIssueCounts(), studentResults: sessionState.mode==='classroom'?buildStudentResults():[]
   };
 }
 
@@ -2291,8 +2347,8 @@ function buildIssueTableHtml(counts){
 function showSummaryModal(summary){
   var isPersonal = sessionState.mode==='personal';
   var formulaLine = isPersonal
-    ? ('คะแนน = เวลาท่าดี ÷ (เวลาท่าดี + เวลาควรปรับ) × 100<br>ครั้งนี้: '+Math.round(summary.goodSeconds)+' ÷ ('+Math.round(summary.goodSeconds)+' + '+Math.round(summary.badSeconds)+') × 100 = '+summary.score+' คะแนน')
-    : ('คะแนน = จำนวนการสังเกตท่าดี ÷ จำนวนการสังเกตทั้งหมด × 100<br>ครั้งนี้: '+sessionState.classroomGoodObservations+' ÷ '+sessionState.classroomTotalObservations+' × 100 = '+summary.score+' คะแนน');
+    ? ('คะแนน = ค่าเฉลี่ยคะแนนท่าทางตามเวลา โดยเริ่มจาก 100 และหักตามปัญหาที่ตรวจพบ<br>คะแนนเฉลี่ยครั้งนี้ = '+summary.score+' คะแนน')
+    : ('คะแนนห้องเรียน = ค่าเฉลี่ยคะแนนรายคนจากทุกการสังเกตที่ตรวจได้ชัด<br>การสังเกตที่ใช้คิดคะแนน '+sessionState.classroomScoreObservations+' ครั้ง · คะแนนเฉลี่ย '+summary.score+' คะแนน');
 
   var html = ''
     + '<h2 class="center-text">สรุปผลการตรวจ</h2>'
@@ -2310,6 +2366,7 @@ function showSummaryModal(summary){
     + '<h3>ควรปรับ</h3><ul>'+summary.improvePoints.map(liItem).join('')+'</ul>'
     + '<h3>เป้าหมายครั้งถัดไป</h3><p>'+escapeHtml(summary.nextGoal)+'</p>'
     + '<h3>ตารางปัญหาที่พบ</h3>' + buildIssueTableHtml(summary.issueCounts)
+    + (summary.studentResults&&summary.studentResults.length ? '<h3 style="margin-top:14px;">ผลนักเรียนรายบุคคล</h3><div class="table-scroll"><table class="data-table"><thead><tr><th>ตำแหน่ง</th><th>รหัส</th><th>ชื่อ</th><th>คะแนน</th><th>ท่าดี</th><th>ควรปรับ</th><th>ไม่ชัด</th><th>Alert</th></tr></thead><tbody>'+summary.studentResults.map(function(s){return '<tr><td>'+s.seatOrder+'</td><td>'+escapeHtml(s.studentId)+'</td><td>'+escapeHtml(s.studentName)+'</td><td>'+s.score+'</td><td>'+s.goodObservations+'</td><td>'+s.badObservations+'</td><td>'+s.unknownObservations+'</td><td>'+s.alertCount+'</td></tr>';}).join('')+'</tbody></table></div>' : '')
     + '<p style="margin-top:10px;">'+escapeHtml(summary.advice)+'</p>'
     + '<div id="saveStatusLine" class="small-muted" style="margin-top:10px;">🔄 กำลังบันทึกข้อมูล…</div>'
     + '<div class="btn-row" style="margin-top:14px;">'
@@ -2349,12 +2406,7 @@ function flushEventsList(events){
     return p.then(function(){ return serverCall('saveEvents', {events:batch}); });
   }, Promise.resolve());
 }
-function queuePendingSession(sessionPayload, events){
-  var list = lsGet(LS_KEYS.pendingSessions, []);
-  list.push({ session: sessionPayload, events: events, queuedAt: new Date().toISOString() });
-  lsSet(LS_KEYS.pendingSessions, list);
-  updatePendingSessionInfoUi();
-}
+function queuePendingSession(sessionPayload,events,studentResults){var list=lsGet(LS_KEYS.pendingSessions,[]);list.push({session:sessionPayload,events:events||[],studentResults:studentResults||[],queuedAt:new Date().toISOString()});lsSet(LS_KEYS.pendingSessions,list);updatePendingSessionInfoUi();}
 function updatePendingSessionInfoUi(){
   var list = lsGet(LS_KEYS.pendingSessions, []);
   var el = $('pendingSessionInfo');
@@ -2362,23 +2414,7 @@ function updatePendingSessionInfoUi(){
   el.textContent = list.length ? ('มีข้อมูลค้างส่ง '+list.length+' รายการ') : 'ไม่มีข้อมูลค้างส่ง';
 }
 function retryPendingSessions(){
-  var list = lsGet(LS_KEYS.pendingSessions, []);
-  if (!list.length){ toast('ไม่มีข้อมูลค้างส่ง'); return; }
-  if (!isApiConfigured()){ toast('ยังไม่ได้ตั้งค่า Backend','error'); return; }
-  toast('กำลังลองบันทึกข้อมูลที่ค้างอยู่…');
-  var remaining = [];
-  var chain = list.reduce(function(p, item){
-    return p.then(function(){
-      return serverCall('saveSession', item.session).then(function(){
-        return flushEventsList(item.events);
-      }).catch(function(){ remaining.push(item); });
-    });
-  }, Promise.resolve());
-  chain.then(function(){
-    lsSet(LS_KEYS.pendingSessions, remaining);
-    updatePendingSessionInfoUi();
-    toast(remaining.length ? ('ยังเหลือ '+remaining.length+' รายการที่บันทึกไม่สำเร็จ') : 'บันทึกข้อมูลที่ค้างอยู่สำเร็จทั้งหมด','success');
-  });
+  var list=lsGet(LS_KEYS.pendingSessions,[]);if(!list.length){toast('ไม่มีข้อมูลค้างส่ง');return;}if(!isApiConfigured()){toast('ยังไม่ได้ตั้งค่า Backend','error');return;}toast('กำลังลองบันทึกข้อมูลที่ค้างอยู่…');var remaining=[];var chain=list.reduce(function(p,item){return p.then(function(){var bundle={session:item.session,events:item.events||[],studentResults:item.studentResults||[]};return formPostCall('saveBundle',bundle).then(function(){return waitForSaveStatus(item.session.sessionId,(item.events||[]).length,(item.studentResults||[]).length);}).catch(function(){remaining.push(item);});});},Promise.resolve());chain.then(function(){lsSet(LS_KEYS.pendingSessions,remaining);updatePendingSessionInfoUi();toast(remaining.length?('ยังเหลือ '+remaining.length+' รายการที่บันทึกไม่สำเร็จ'):'บันทึกข้อมูลที่ค้างอยู่สำเร็จทั้งหมด',remaining.length?'error':'success');});
 }
 function downloadPendingCsv(){
   var list = lsGet(LS_KEYS.pendingSessions, []);
@@ -2393,48 +2429,10 @@ function downloadPendingCsv(){
 }
 
 function saveSessionToBackend(summary){
-  var profile = lsGet(LS_KEYS.profile, {}) || {};
-  var sessionPayload = {
-    sessionId: summary.sessionId, appMode: sessionState.mode,
-    userId: profile.userId||'', name: profile.name||'', age: profile.age||'', role: profile.role||'',
-    activityMode: profile.activity||'', organization: profile.organization||'', className: profile.className||'',
-    deviceType: profile.device||'', cameraType: cameraTypeChip.get()||'', cameraAngle: sessionState.cameraAngle||'',
-    totalSeconds: Math.round(summary.totalSeconds), goodSeconds: Math.round(summary.goodSeconds),
-    badSeconds: Math.round(summary.badSeconds), unknownSeconds: Math.round(summary.unknownSeconds),
-    score: summary.score, alertCount: summary.alertCount, mainIssue: summary.mainIssue.label,
-    forwardHeadCount: sessionState.forwardHeadCount, slouchCount: sessionState.slouchCount,
-    shoulderTiltCount: sessionState.shoulderTiltCount, elbowAngleIssueCount: sessionState.elbowAngleIssueCount,
-    kneeAngleIssueCount: sessionState.kneeAngleIssueCount, screenDistanceIssueCount: sessionState.screenDistanceIssueCount,
-    eyeBreakCount: sessionState.eyeBreakCount, postureBreakCount: sessionState.postureBreakCount,
-    stretchBreakCount: sessionState.stretchBreakCount, improvementAdvice: summary.advice,
-    startedAt: sessionState.startedAt, endedAt: sessionState.endedAt, notes:''
-  };
-  var eventsSnapshot = sessionEventsBuffer.slice();
-  sessionEventsBuffer = [];
-
-  if (!isApiConfigured()){
-    queuePendingSession(sessionPayload, eventsSnapshot);
-    updateSaveStatusUi(false, 'ยังไม่ได้ตั้งค่า Backend ระบบเก็บข้อมูลไว้ในเครื่องแล้ว');
-    return Promise.resolve();
-  }
-
-  var userSavePromise = profile.userId
-    ? serverCall('saveOrUpdateUser', { userId: profile.userId, name: profile.name, age: profile.age, role: profile.role, organization: profile.organization, className: profile.className }).catch(function(){})
-    : Promise.resolve();
-
-  return userSavePromise.then(function(){
-    return serverCall('saveSession', sessionPayload);
-  }).then(function(res){
-    return flushEventsList(eventsSnapshot).then(function(){
-      var dup = res && res.data && res.data.duplicate;
-      updateSaveStatusUi(true, dup ? 'ข้อมูลนี้ถูกบันทึกไว้แล้ว' : 'บันทึกสำเร็จ');
-      toast('บันทึกผลสำเร็จ','success');
-    });
-  }).catch(function(err){
-    queuePendingSession(sessionPayload, eventsSnapshot);
-    updateSaveStatusUi(false, 'บันทึกไม่สำเร็จ: '+err.message);
-    toast('บันทึกไม่สำเร็จ ระบบเก็บข้อมูลไว้ในเครื่องแล้ว','error');
-  });
+  var profile=lsGet(LS_KEYS.profile,{})||{};
+  var sessionPayload={sessionId:summary.sessionId,appMode:sessionState.mode,userId:profile.userId||'',name:profile.name||'',age:profile.age||'',role:profile.role||'',activityMode:profile.activity||'',organization:profile.organization||'',className:profile.className||'',deviceType:profile.device||'',cameraType:cameraTypeChip.get()||'',cameraAngle:sessionState.cameraAngle||'',totalSeconds:Math.round(summary.totalSeconds),goodSeconds:Math.round(summary.goodSeconds),badSeconds:Math.round(summary.badSeconds),unknownSeconds:Math.round(summary.unknownSeconds),scoredSeconds:Number(sessionState.scoredSeconds.toFixed(2)),dataCoveragePercent:summary.coverage,expectedPeople:sessionState.mode==='classroom'?sessionState.classroomRoster.length:1,scoringMethod:sessionState.mode==='classroom'?'average-person-observation-deduction-score':'time-weighted-posture-deduction-score',score:summary.score,alertCount:summary.alertCount,mainIssue:summary.mainIssue.label,forwardHeadCount:sessionState.forwardHeadCount,headTiltCount:sessionState.headTiltCount,slouchCount:sessionState.slouchCount,shoulderTiltCount:sessionState.shoulderTiltCount,elbowAngleIssueCount:sessionState.elbowAngleIssueCount,kneeAngleIssueCount:sessionState.kneeAngleIssueCount,upperArmIssueCount:sessionState.upperArmIssueCount,screenDistanceIssueCount:sessionState.screenDistanceIssueCount,eyeBreakCount:sessionState.eyeBreakCount,postureBreakCount:sessionState.postureBreakCount,stretchBreakCount:sessionState.stretchBreakCount,improvementAdvice:summary.advice,startedAt:sessionState.startedAt,endedAt:sessionState.endedAt,notes:'SmartFlex '+APP_VERSION};
+  var eventsSnapshot=sessionEventsBuffer.slice();eventsSnapshot.forEach(function(e){e.sessionId=summary.sessionId;});var studentResults=summary.studentResults||[];var bundle={session:sessionPayload,events:eventsSnapshot,studentResults:studentResults};
+  return formPostCall('saveBundle',bundle).then(function(){return waitForSaveStatus(summary.sessionId,eventsSnapshot.length,studentResults.length);}).then(function(){updateSaveStatusUi(true,'บันทึก Session, Events'+(studentResults.length?' และผลนักเรียนรายบุคคล':'')+' สำเร็จ');toast('บันทึกผลสำเร็จ','success');}).catch(function(err){queuePendingSession(sessionPayload,eventsSnapshot,studentResults);updateSaveStatusUi(false,'บันทึกไม่สำเร็จ: '+err.message);toast('บันทึกไม่สำเร็จ ระบบเก็บข้อมูลไว้ในเครื่องแล้ว','error');throw err;});
 }
 
 /* ======================================================================
@@ -2452,29 +2450,12 @@ function getFilterPayload(){
   };
 }
 function loadHistory(){
-  $('historyLoadingState').style.display='block';
-  $('historyLoadingState').textContent='กำลังโหลดข้อมูล…';
-  $('historyEmptyState').style.display='none';
-  $('historyTable').style.display='none';
-
-  if (!isApiConfigured()){
-    $('historyLoadingState').style.display='none';
-    $('historyEmptyState').style.display='block';
-    $('historyEmptyState').textContent = 'ยังไม่ได้ตั้งค่า Backend (สำหรับผู้ดูแลระบบ) จึงยังไม่มีข้อมูลย้อนหลัง';
-    renderKpi({});
-    return;
-  }
-  serverCall('getReportData', getFilterPayload()).then(function(res){
-    currentReportData = (res && res.data) || {kpi:{},sessions:[],issueTotals:{},trend:[]};
-    renderKpi(currentReportData.kpi);
-    renderHistoryTable(currentReportData.sessions);
-    loadChartJsThenRender();
-  }).catch(function(err){
-    $('historyLoadingState').style.display='none';
-    $('historyEmptyState').style.display='block';
-    $('historyEmptyState').textContent = 'โหลดข้อมูลไม่สำเร็จ: '+err.message;
-    toast('โหลดผลย้อนหลังไม่สำเร็จ','error');
-  });
+  $('historyLoadingState').style.display='block';$('historyLoadingState').textContent='กำลังโหลดข้อมูล…';$('historyEmptyState').style.display='none';$('historyTable').style.display='none';$('studentHistoryCard').style.display='none';
+  if(!isApiConfigured()){$('historyLoadingState').style.display='none';$('historyEmptyState').style.display='block';$('historyEmptyState').textContent='ยังไม่ได้ตั้งค่า Backend';renderKpi({});return;}
+  serverCall('getReportData',getFilterPayload()).then(function(res){var raw=(res&&res.data)||{};var summary=raw.summary||{};var sessions=(raw.sessions||[]).map(function(s){return{sessionId:s.SessionID,savedAt:s.SavedAt,appMode:s.AppMode,userId:s.UserID,name:s.Name,className:s.ClassName,activityMode:s.ActivityMode,totalSeconds:Number(s.TotalSeconds||0),score:Number(s.Score||0),goodSeconds:Number(s.GoodSeconds||0),badSeconds:Number(s.BadSeconds||0),unknownSeconds:Number(s.UnknownSeconds||0),alertCount:Number(s.AlertCount||0),mainIssue:s.MainIssue,startedAt:s.StartedAt,endedAt:s.EndedAt};});var issue=summary.issueTotals||{};currentReportData={kpi:{count:summary.sessionCount||sessions.length,avgScore:summary.averageScore||0,totalSeconds:summary.totalSeconds||0,alertCount:summary.alertCount||0,goodSeconds:summary.goodSeconds||0,badSeconds:summary.badSeconds||0,unknownSeconds:summary.unknownSeconds||0},sessions:sessions,studentResults:raw.studentResults||[],issueTotals:{'คอยื่นหรือก้มหน้า':issue.forwardHead||0,'ศีรษะเอียง':issue.headTilt||0,'หลังค่อมหรือลำตัวโน้ม':issue.slouch||0,'ไหล่เอียง':issue.shoulderTilt||0,'มุมศอกไม่เหมาะสม':issue.elbowAngle||0,'มุมเข่าไม่เหมาะสม':issue.kneeAngle||0,'ต้นแขนกาง':issue.upperArm||0,'ระยะจากกล้อง/จอ':issue.screenDistance||0},trend:sessions.slice().reverse().map(function(s){return{date:String(s.startedAt||s.savedAt||'').slice(0,10),score:s.score};})};renderKpi(currentReportData.kpi);renderHistoryTable(sessions);renderStudentHistory(currentReportData.studentResults);loadChartJsThenRender();}).catch(function(err){$('historyLoadingState').style.display='none';$('historyEmptyState').style.display='block';$('historyEmptyState').textContent='โหลดข้อมูลไม่สำเร็จ: '+err.message;toast('โหลดผลย้อนหลังไม่สำเร็จ','error');});
+}
+function renderStudentHistory(rows){
+  rows=rows||[];$('studentHistoryCard').style.display=rows.length?'block':'none';$('studentHistoryCount').textContent=rows.length+' รายการ';$('studentHistoryBody').innerHTML=rows.map(function(r){return '<tr><td>'+escapeHtml(formatDisplayDate(r.StartedAt||r.SavedAt))+'</td><td>'+escapeHtml(r.StudentID||'-')+'</td><td>'+escapeHtml(r.StudentName||'-')+'</td><td>'+escapeHtml(r.ClassName||'-')+'</td><td>'+(r.SeatOrder||'-')+'</td><td>'+Number(r.Score||0)+'</td><td>'+(r.GoodObservations||0)+'</td><td>'+(r.BadObservations||0)+'</td><td>'+(r.UnknownObservations||0)+'</td><td>'+(r.AlertCount||0)+'</td><td>'+escapeHtml(r.MainIssue||'-')+'</td><td><button type="button" class="btn btn-ghost" data-session-id="'+escapeHtml(r.SessionID)+'">ดู Session</button></td></tr>';}).join('');
 }
 function renderKpi(kpi){
   kpi = kpi||{};
@@ -2557,29 +2538,10 @@ function openSessionDetail(sessionId){
   });
 }
 function renderSessionDetailModal(data){
-  var s = (data && data.session) || {};
-  var events = (data && data.events) || [];
-  var html = '<h2>รายละเอียด Session</h2>'
-    + '<div class="summary-list">'
-    + summaryRow('UserID', escapeHtml(s.UserID||'-'))
-    + summaryRow('ชื่อ/ห้อง', escapeHtml(s.Name||s.ClassName||'-'))
-    + summaryRow('โหมด', s.AppMode==='personal'?'ส่วนบุคคล':'ห้องเรียน')
-    + summaryRow('เริ่ม/สิ้นสุด', escapeHtml(formatDisplayDate(s.StartedAt))+' - '+escapeHtml(formatDisplayDate(s.EndedAt)))
-    + summaryRow('คะแนน', s.Score)
-    + summaryRow('เวลาท่าดี/ควรปรับ/ไม่ชัด', formatSeconds(s.GoodSeconds)+' / '+formatSeconds(s.BadSeconds)+' / '+formatSeconds(s.UnknownSeconds))
-    + summaryRow('จำนวน Alert', s.AlertCount)
-    + summaryRow('ปัญหาหลัก', escapeHtml(s.MainIssue||'-'))
-    + summaryRow('อุปกรณ์', escapeHtml(s.DeviceType||'-'))
-    + summaryRow('มุมกล้อง', escapeHtml(s.CameraAngle||'-'))
-    + '</div>'
-    + '<h3 style="margin-top:14px;">คำแนะนำ</h3><p>'+escapeHtml(s.ImprovementAdvice||'-')+'</p>'
-    + '<h3>Events ที่บันทึก ('+events.length+')</h3>'
-    + '<div class="table-scroll"><table class="data-table"><thead><tr><th>เวลา</th><th>ปัญหา</th><th>ระดับ</th><th>ข้อความ</th></tr></thead><tbody>'
-    + events.map(function(ev){
-        return '<tr><td>'+escapeHtml(formatDisplayDate(ev.eventTime))+'</td><td>'+escapeHtml(ev.issue)+'</td><td>'+escapeHtml(ev.severity)+'</td><td>'+escapeHtml(ev.message)+'</td></tr>';
-      }).join('')
-    + '</tbody></table></div>';
-  openModal(html);
+  var s=(data&&data.session)||{},events=(data&&data.events)||[],students=(data&&data.studentResults)||[];
+  var html='<h2>รายละเอียด Session</h2><div class="summary-list">'+summaryRow('UserID',escapeHtml(s.UserID||'-'))+summaryRow('ชื่อ/ห้อง',escapeHtml(s.Name||s.ClassName||'-'))+summaryRow('โหมด',s.AppMode==='personal'?'ส่วนบุคคล':'ห้องเรียน')+summaryRow('เริ่ม/สิ้นสุด',escapeHtml(formatDisplayDate(s.StartedAt))+' - '+escapeHtml(formatDisplayDate(s.EndedAt)))+summaryRow('คะแนน',s.Score)+summaryRow('Coverage',(s.DataCoveragePercent!==undefined?s.DataCoveragePercent:'-')+'%')+summaryRow('เวลาท่าดี/ควรปรับ/ไม่ชัด',formatSeconds(s.GoodSeconds)+' / '+formatSeconds(s.BadSeconds)+' / '+formatSeconds(s.UnknownSeconds))+summaryRow('จำนวน Alert',s.AlertCount)+summaryRow('ปัญหาหลัก',escapeHtml(s.MainIssue||'-'))+summaryRow('อุปกรณ์',escapeHtml(s.DeviceType||'-'))+summaryRow('มุมกล้อง',escapeHtml(s.CameraAngle||'-'))+'</div><h3 style="margin-top:14px;">คำแนะนำ</h3><p>'+escapeHtml(s.ImprovementAdvice||'-')+'</p>';
+  if(students.length)html+='<h3>ผลนักเรียนรายบุคคล</h3><div class="table-scroll"><table class="data-table"><thead><tr><th>ตำแหน่ง</th><th>รหัส</th><th>ชื่อ</th><th>คะแนน</th><th>ท่าดี</th><th>ควรปรับ</th><th>ไม่ชัด</th><th>Alert</th><th>ปัญหาหลัก</th></tr></thead><tbody>'+students.map(function(r){return'<tr><td>'+r.SeatOrder+'</td><td>'+escapeHtml(r.StudentID)+'</td><td>'+escapeHtml(r.StudentName)+'</td><td>'+r.Score+'</td><td>'+r.GoodObservations+'</td><td>'+r.BadObservations+'</td><td>'+r.UnknownObservations+'</td><td>'+(r.AlertCount||0)+'</td><td>'+escapeHtml(r.MainIssue||'-')+'</td></tr>';}).join('')+'</tbody></table></div>';
+  html+='<h3>Events ที่บันทึก ('+events.length+')</h3><div class="table-scroll"><table class="data-table"><thead><tr><th>เวลา</th><th>ปัญหา</th><th>ระดับ</th><th>ข้อความ</th></tr></thead><tbody>'+events.map(function(ev){return'<tr><td>'+escapeHtml(formatDisplayDate(ev.EventTime||ev.eventTime))+'</td><td>'+escapeHtml(ev.Issue||ev.issue||'-')+'</td><td>'+escapeHtml(ev.Severity||ev.severity||'-')+'</td><td>'+escapeHtml(ev.Message||ev.message||'-')+'</td></tr>';}).join('')+'</tbody></table></div>';openModal(html);
 }
 
 /* ======================================================================
@@ -2612,11 +2574,11 @@ $('modalContent').addEventListener('click', function(e){
   if (action==='back-to-start'){ closeModal(); showPage('start'); }
   else if (action==='go-history'){ closeModal(); showPage('history'); }
 });
-$('historyTableBody').addEventListener('click', function(e){
+[$('historyTableBody'),$('studentHistoryBody')].forEach(function(body){body.addEventListener('click', function(e){
   var btn = e.target.closest('[data-session-id]');
   if (!btn) return;
   openSessionDetail(btn.getAttribute('data-session-id'));
-});
+});});
 
 $('btnSearchHistory').addEventListener('click', loadHistory);
 $('btnClearFilter').addEventListener('click', function(){
@@ -2640,6 +2602,7 @@ $('btnExportCsv').addEventListener('click', function(){
   var filename = 'SmartFlex_' + (userId ? userId.replace(/[^a-zA-Z0-9_-]/g,'') : 'ALL') + '.csv';
   downloadTextFile(csv, filename, 'text/csv;charset=utf-8;');
 });
+$('btnExportStudentsCsv').addEventListener('click',function(){var rows=(currentReportData&&currentReportData.studentResults)||[];if(!rows.length){toast('ไม่มีผลนักเรียนให้ส่งออก');return;}var headers=Array.from(new Set(rows.reduce(function(a,r){return a.concat(Object.keys(r));},[])));var csv=headers.join(',')+'\n'+rows.map(function(r){return headers.map(function(h){return csvEscape(r[h]);}).join(',');}).join('\n');downloadTextFile(csv,'SmartFlex_Students_'+($('filterUserId').value.trim()||'ALL')+'.csv','text/csv;charset=utf-8;');});
 $('btnPrintReport').addEventListener('click', function(){ window.print(); });
 $('btnRetryPending').addEventListener('click', retryPendingSessions);
 $('btnDownloadPendingCsv').addEventListener('click', downloadPendingCsv);
@@ -2672,6 +2635,7 @@ function init(){
 
   initAdminWarning();
   loadProfileIntoForm();
+  renderClassroomRoster((lsGet(LS_KEYS.profile,{})||{}).students);
   loadCameraSoundSettings();
   updatePendingSessionInfoUi();
   $('aboutVersion').textContent = APP_VERSION;
