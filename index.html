@@ -813,8 +813,8 @@ table.data-table th{color:var(--ink-soft);font-weight:700;font-size:12px;}
    1. CONFIG
    ====================================================================== */
 var APP_NAME = 'SmartFlex';
-var APP_VERSION = '1.0.0';
-var APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwVSrvnfvQU2lU6UIp7nL-ELgLOC3Cj20jsN4qwViWcAGZLlGCkUsIWOejUWzDSCt8zAQ/exec'; // ผู้ดูแลระบบ: แก้เป็น URL จาก Deploy ที่ลงท้ายด้วย /exec
+var APP_VERSION = '1.0.1';
+var APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwr7hSpr-s8A_55yfKgrZWRp3fh5mD-_L9JcgWk8hU3ZXeOoxV0Yukp2GFRmiOC6w5SBg/exec'; // ผู้ดูแลระบบ: แก้เป็น URL จาก Deploy ที่ลงท้ายด้วย /exec
 var GITHUB_REPOSITORY = '[GITHUB_REPOSITORY]';
 
 var DEFAULT_SETTINGS = {
@@ -943,14 +943,25 @@ function lsSet(key, value){
    4. การเชื่อมต่อ Backend (JSONP)
    ====================================================================== */
 function validateAppsScriptUrl(url){
-  if (!url) return { valid:false, reason:'ยังไม่ได้ตั้งค่า URL Backend' };
-  if (url.indexOf('https://script.google.com/macros/s/AKfycbwPq0L8FTNUJiF62MCdXWKfWLzoBEqF1Vf563DGhXPoi_qkW-qhDwsG-zewcHuvsvHHNQ/exec') !== -1) return { valid:false, reason:'ยังไม่ได้ตั้งค่า URL Backend' };
+  if (!url || typeof url !== 'string') {
+    return { valid:false, reason:'ยังไม่ได้ตั้งค่า URL Backend' };
+  }
+
   var trimmed = url.trim();
-  if (/\/dev$/.test(trimmed)) return { valid:false, reason:'ห้ามใช้ URL ที่ลงท้ายด้วย /dev กรุณาใช้ URL จาก Deploy ที่ลงท้ายด้วย /exec' };
-  if (!/^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec$/.test(trimmed)){
+  if (!trimmed) {
+    return { valid:false, reason:'ยังไม่ได้ตั้งค่า URL Backend' };
+  }
+
+  if (/\/dev\/?$/i.test(trimmed)) {
+    return { valid:false, reason:'ห้ามใช้ URL ที่ลงท้ายด้วย /dev กรุณาใช้ URL จาก Deploy ที่ลงท้ายด้วย /exec' };
+  }
+
+  // รองรับทั้ง /exec และ /exec/ และไม่ผูกติดกับ Deployment ID เก่า
+  if (!/^https:\/\/script\.google\.com\/macros\/s\/[^/?#]+\/exec\/?$/i.test(trimmed)) {
     return { valid:false, reason:'รูปแบบ URL ไม่ถูกต้อง ต้องเป็น URL จาก Deploy ที่ลงท้ายด้วย /exec' };
   }
-  return { valid:true };
+
+  return { valid:true, url: trimmed.replace(/\/$/, '') };
 }
 function isApiConfigured(){ return validateAppsScriptUrl(APPS_SCRIPT_URL).valid; }
 
@@ -959,6 +970,7 @@ function jsonpCall(action, dataObj, timeoutMs){
   return new Promise(function(resolve, reject){
     var check = validateAppsScriptUrl(APPS_SCRIPT_URL);
     if (!check.valid){ reject(new Error(check.reason)); return; }
+    var apiUrl = check.url || APPS_SCRIPT_URL.trim().replace(/\/$/, '');
     jsonpCounter++;
     var cbName = 'smartflex_cb_' + Date.now() + '_' + jsonpCounter;
     var script = document.createElement('script');
@@ -992,7 +1004,7 @@ function jsonpCall(action, dataObj, timeoutMs){
     params.set('ts', Date.now().toString());
     if (dataObj !== undefined) params.set('data', JSON.stringify(dataObj));
 
-    script.src = APPS_SCRIPT_URL + '?' + params.toString();
+    script.src = apiUrl + '?' + params.toString();
     script.onerror = function(){
       if (done) return;
       done = true; cleanup();
