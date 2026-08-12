@@ -1855,16 +1855,24 @@ function pickBestPose(poses){
   });
   return best;
 }
-function drawAngleGuide(ctx, canvas){
-  // เส้นและมุมตัวอย่าง "องศาที่ถูกต้อง" แสดงก่อนเริ่มเก็บท่ามาตรฐาน
+function drawAngleGuide(ctx, canvas, mirrored){
+  // เส้นและมุมตัวอย่าง "องศาที่ถูกต้อง" แสดงตั้งแต่เริ่มจับท่านั่ง (เปิดกล้อง) จนกว่าจะตั้งท่ามาตรฐานเสร็จ
   var w = canvas.width, h = canvas.height;
+
+  ctx.save();
+  // ภาพวิดีโอถูก CSS mirror (scaleX(-1)) ที่ container แม่ ทำให้ทุกอย่างที่วาดบน canvas
+  // (รวมถึงข้อความ) กลับด้านไปด้วย จึงต้อง mirror ข้อมูลที่วาดกลับมาก่อนหนึ่งครั้ง
+  // เพื่อให้เมื่อ CSS mirror ทับอีกที ผลลัพธ์สุดท้ายที่เห็นบนจอ "อ่านได้ปกติ ไม่กลับด้าน"
+  if (mirrored){
+    ctx.translate(w, 0);
+    ctx.scale(-1, 1);
+  }
+
   var gx = w*0.62;              // ตำแหน่งแนวหลัง (แกนอ้างอิงแนวตั้ง)
   var hipY = h*0.86;            // จุดสะโพก (มุมหลัง-ต้นขา)
   var shoulderY = h*0.40;       // จุดไหล่
-  var backLen = hipY - shoulderY;
   var thighLen = w*0.22;
 
-  ctx.save();
   ctx.lineWidth = 2.5;
   ctx.setLineDash([8,6]);
   ctx.strokeStyle = 'rgba(76,179,153,0.9)'; // เขียวโทนธีม
@@ -1937,7 +1945,8 @@ function drawOverlay(){
   if (!cameraState.active) return;
 
   if (baselineGuideActive){
-    drawAngleGuide(ctx, canvas);
+    var mirrored = cameraStageEl && cameraStageEl.classList.contains('mirror');
+    drawAngleGuide(ctx, canvas, mirrored);
   }
 
   if (!cameraState.lastPoseResult || !cameraState.lastPoseResult.length) return;
@@ -2204,6 +2213,7 @@ function resetSessionCounters(){
   $('missingPartsNotice').style.display = 'none';
   updateSoundBadge();
   var lbl = $('classroomLabels'); if (lbl) lbl.innerHTML='';
+  baselineGuideActive = false;
   if (overlayCtx && overlayCanvasEl) overlayCtx.clearRect(0,0,overlayCanvasEl.width,overlayCanvasEl.height);
 }
 
@@ -2265,6 +2275,12 @@ async function openCameraFlow(testOnly){
 
     $('cameraHint').textContent = testOnly ? 'ทดสอบอุปกรณ์: กล้องและ AI พร้อมใช้งานแล้ว' : 'กล้องพร้อมแล้ว ลองขยับตัวให้เห็นในเฟรม';
     if (testOnly) toast('ทดสอบอุปกรณ์สำเร็จ กล้องและ AI พร้อมใช้งาน','success');
+
+    // แสดงเส้นแสดงองศาตัวอย่างทันทีตั้งแต่เริ่มจับท่านั่ง (เปิดกล้อง) ในโหมดส่วนบุคคล
+    // จนกว่าจะตั้งท่ามาตรฐานเสร็จ ผู้ตรวจจะได้เห็นองศาที่ถูกต้องล่วงหน้าก่อนเริ่มนับถอยหลัง
+    if (!testOnly && sessionState.mode==='personal' && !sessionState.baselineDone){
+      baselineGuideActive = true;
+    }
   } catch(err){
     console.error(err);
     hideLoading();
