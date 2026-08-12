@@ -232,7 +232,7 @@ input:focus,select:focus,textarea:focus,button:focus-visible{
   position:relative;width:100%;border-radius:var(--radius-lg);overflow:hidden;background:#176340;
   aspect-ratio:4/3;max-height:70vh;margin:0 auto;
 }
-.camera-stage.mirror .camera-frame{transform:scaleX(-1);}
+.camera-stage.mirror .camera-frame video{transform:scaleX(-1);}
 .camera-frame{position:absolute;inset:0;width:100%;height:100%;}
 .camera-frame video, .camera-frame canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;}
 .camera-labels-layer{position:absolute;inset:0;pointer-events:none;}
@@ -1829,21 +1829,25 @@ var SKELETON_EDGES = [
 ];
 var STATUS_COLORS = { good:'#1FA971', bad:'#E5484D', unknown:'#8A94A6' };
 
-function drawSkeleton(ctx, pose, rect, color){
+function drawSkeleton(ctx, pose, rect, color, mirrored){
   if (!pose) return;
   ctx.strokeStyle=color; ctx.lineWidth=3; ctx.fillStyle=color;
+  function px(x){
+    var screenX = rect.x + x*rect.scale;
+    return mirrored ? (rect.x*2 + rect.w - screenX) : screenX;
+  }
   SKELETON_EDGES.forEach(function(edge){
     var a=kp(pose,edge[0]), b=kp(pose,edge[1]);
     if(!a||!b) return;
     ctx.beginPath();
-    ctx.moveTo(rect.x+a.x*rect.scale, rect.y+a.y*rect.scale);
-    ctx.lineTo(rect.x+b.x*rect.scale, rect.y+b.y*rect.scale);
+    ctx.moveTo(px(a.x), rect.y+a.y*rect.scale);
+    ctx.lineTo(px(b.x), rect.y+b.y*rect.scale);
     ctx.stroke();
   });
   (pose.keypoints||[]).forEach(function(k){
     if ((k.score||0)<KP_SCORE_THRESHOLD) return;
     ctx.beginPath();
-    ctx.arc(rect.x+k.x*rect.scale, rect.y+k.y*rect.scale, 4, 0, Math.PI*2);
+    ctx.arc(px(k.x), rect.y+k.y*rect.scale, 4, 0, Math.PI*2);
     ctx.fill();
   });
 }
@@ -1855,18 +1859,11 @@ function pickBestPose(poses){
   });
   return best;
 }
-function drawAngleGuide(ctx, canvas, mirrored){
+function drawAngleGuide(ctx, canvas){
   // เส้นและมุมตัวอย่าง "องศาที่ถูกต้อง" แสดงตั้งแต่เริ่มจับท่านั่ง (เปิดกล้อง) จนกว่าจะตั้งท่ามาตรฐานเสร็จ
   var w = canvas.width, h = canvas.height;
 
   ctx.save();
-  // ภาพวิดีโอถูก CSS mirror (scaleX(-1)) ที่ container แม่ ทำให้ทุกอย่างที่วาดบน canvas
-  // (รวมถึงข้อความ) กลับด้านไปด้วย จึงต้อง mirror ข้อมูลที่วาดกลับมาก่อนหนึ่งครั้ง
-  // เพื่อให้เมื่อ CSS mirror ทับอีกที ผลลัพธ์สุดท้ายที่เห็นบนจอ "อ่านได้ปกติ ไม่กลับด้าน"
-  if (mirrored){
-    ctx.translate(w, 0);
-    ctx.scale(-1, 1);
-  }
 
   var gx = w*0.62;              // ตำแหน่งแนวหลัง (แกนอ้างอิงแนวตั้ง)
   var hipY = h*0.86;            // จุดสะโพก (มุมหลัง-ต้นขา)
@@ -1945,20 +1942,20 @@ function drawOverlay(){
   if (!cameraState.active) return;
 
   if (baselineGuideActive){
-    var mirrored = cameraStageEl && cameraStageEl.classList.contains('mirror');
-    drawAngleGuide(ctx, canvas, mirrored);
+    drawAngleGuide(ctx, canvas);
   }
 
   if (!cameraState.lastPoseResult || !cameraState.lastPoseResult.length) return;
   var rect = getVideoDisplayRect();
+  var mirrored = cameraState.currentFacing === 'user';
 
   if (sessionState.mode==='classroom'){
     lastClassroomResults.forEach(function(item){
-      drawSkeleton(ctx, item.pose, rect, STATUS_COLORS[item.result.overall]||STATUS_COLORS.unknown);
+      drawSkeleton(ctx, item.pose, rect, STATUS_COLORS[item.result.overall]||STATUS_COLORS.unknown, mirrored);
     });
   } else {
     var pose = pickBestPose(cameraState.lastPoseResult);
-    drawSkeleton(ctx, pose, rect, STATUS_COLORS[lastOverallStatus] || STATUS_COLORS.unknown);
+    drawSkeleton(ctx, pose, rect, STATUS_COLORS[lastOverallStatus] || STATUS_COLORS.unknown, mirrored);
   }
 }
 
